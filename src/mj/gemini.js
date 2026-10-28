@@ -50,8 +50,16 @@ function creerGemini({ cle, modele, fetchFn }) {
       for (let i = 0; i < attentes.length; i++) {
         if (attentes[i]) await new Promise((ok) => setTimeout(ok, attentes[i]));
         const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(nom) + ":generateContent";
-        r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cle }, body: JSON.stringify(corps), signal: AbortSignal.timeout(45000) });
-        const txt = await r.text();
+        const t1 = Date.now();
+        let txt;
+        try {
+          r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cle }, body: JSON.stringify(corps), signal: AbortSignal.timeout(20000) });
+          txt = await r.text();
+        } catch (e) {
+          console.warn("Gemini sans réponse après " + Math.round((Date.now() - t1) / 1000) + " s (essai " + (i + 1) + "): " + e.message);
+          if (i === attentes.length - 1) throw new Error("Gemini ne répond pas (essayé " + attentes.length + " fois). Réessaie dans un moment.");
+          continue;
+        }
         try { j = JSON.parse(txt); } catch { j = {}; }
         if (r.ok) { console.log("Gemini ok en " + Math.round((Date.now() - debut) / 100) / 10 + " s (essai " + (i + 1) + ")"); break; }
         if (r.status === 400 && corps.generationConfig.thinkingConfig && /think/i.test((j.error && j.error.message) || "")) {
