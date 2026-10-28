@@ -112,7 +112,7 @@ function afficher(p) {
 async function agir(fn, zone) {
   $(zone || "err").textContent = "";
   document.querySelectorAll("button").forEach((b) => (b.disabled = true));
-  try { await fn(); } catch (e) { $(zone || "err").textContent = e.message; }
+  try { await fn(); } catch (e) { $(zone || "err").textContent = e.message; if (partie) { try { afficher(await api("/api/partie")); } catch {} } }
   document.querySelectorAll("button").forEach((b) => (b.disabled = false));
   if (partie) { $("dire").disabled = !!partie.jets_en_attente.length; }
 }
