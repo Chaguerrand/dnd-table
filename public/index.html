@@ -1,2 +1,137 @@
-<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Table de jeu</title>
-<body style="font-family:system-ui;max-width:640px;margin:2rem auto;padding:0 1rem"><h1>Table de jeu</h1><p>Le serveur est en ligne. L'interface arrive.</p><p><a href="/sante">État du serveur</a></p></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Table de jeu</title>
+<style>
+  :root { --fond:#1b1712; --carte:#2a241b; --texte:#efe6d2; --doux:#b8aa8c; --accent:#d9a441; --bord:#4a3f2d; --rouge:#c9553d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--fond); color:var(--texte); font:16px/1.45 system-ui,-apple-system,sans-serif; padding-bottom:env(safe-area-inset-bottom); }
+  main { max-width:640px; margin:0 auto; padding:12px 16px 120px; }
+  h1 { font-size:20px; margin:8px 0 12px; color:var(--accent); }
+  .carte { background:var(--carte); border:1px solid var(--bord); border-radius:12px; padding:12px; margin-bottom:12px; }
+  button { font:inherit; background:var(--accent); color:#1b1712; border:0; border-radius:10px; padding:10px 14px; font-weight:600; }
+  button.sec { background:transparent; color:var(--texte); border:1px solid var(--bord); font-weight:400; }
+  button:disabled { opacity:.5; }
+  input, select, textarea { font:inherit; width:100%; background:#1b1712; color:var(--texte); border:1px solid var(--bord); border-radius:10px; padding:10px; }
+  textarea { min-height:90px; }
+  .ligne { display:flex; gap:8px; align-items:center; margin-top:8px; }
+  .ligne > * { flex:1; }
+  .msg { padding:8px 10px; border-radius:10px; margin:6px 0; white-space:pre-wrap; }
+  .mj { background:#3a2f1c; border-left:3px solid var(--accent); }
+  .joueur { background:#22303a; border-left:3px solid #5aa0c8; }
+  .sys { color:var(--doux); font-size:14px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; text-align:center; font-size:13px; margin-top:8px; }
+  .stats b { display:block; font-size:18px; }
+  .barre { position:fixed; left:0; right:0; bottom:0; background:var(--carte); border-top:1px solid var(--bord); padding:10px 16px calc(10px + env(safe-area-inset-bottom)); }
+  .barre .in { max-width:640px; margin:0 auto; }
+  .erreur { color:var(--rouge); margin-top:8px; }
+  .jet { border-color:var(--accent); }
+  .petit { color:var(--doux); font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Table de jeu</h1>
+  <div id="connexion" class="carte" hidden>
+    <div>Mot de passe de la table</div>
+    <div class="ligne"><input id="mdp" type="password" autocomplete="current-password"><button id="entrer" style="flex:0 0 auto">Entrer</button></div>
+    <div id="err-connexion" class="erreur"></div>
+  </div>
+  <div id="jeu" hidden>
+    <div id="persos"></div>
+    <div class="carte" id="ajout">
+      <div><b>Ajouter un personnage</b></div>
+      <div class="petit">Colle ici le contenu produit par la page de création, ou prends le personnage d'essai.</div>
+      <textarea id="json" placeholder='{"id":"...","base":{...},"etat":{...}}'></textarea>
+      <div class="ligne"><button class="sec" id="essai">Personnage d'essai</button><button id="importer">Ajouter</button></div>
+      <div id="err-ajout" class="erreur"></div>
+    </div>
+    <div id="jet" class="carte jet" hidden></div>
+    <div id="histoire"></div>
+    <div class="ligne"><button class="sec" id="annuler">Annuler la dernière action</button></div>
+    <div id="err" class="erreur"></div>
+  </div>
+</main>
+<div class="barre" id="barre" hidden>
+  <div class="in">
+    <div class="ligne"><select id="qui"></select></div>
+    <div class="ligne"><input id="texte" placeholder="Que fais-tu ?" enterkeyhint="send"><button id="dire" style="flex:0 0 auto">Dire</button></div>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const NOMS = { sol: "Solidité", per: "Perception", end: "Endurance", cha: "Charisme", int: "Intelligence", agi: "Agilité", lot: "Loterie", zen: "Zen" };
+const ESSAI = {
+  id: "korga",
+  base: { nom: "Korga", niveau: 1, race: "Goliath", classe: "Guerrier", historique: "Soldat", taille: "Grande", vitesse: "10,5 m",
+    competences: ["Athlétisme", "Perception"], stats_total: { sol: 16, per: 12, end: 14, cha: 10, int: 10, agi: 11, lot: 10, zen: 8 }, sorts: null },
+  etat: { pv: 12, pv_max: 12, effets: [], inventaire: { po: 10, objets: ["Hache à deux mains", "Sac à dos", "Corde (15 m)"] }, emplacements_utilises: 0, position: null }
+};
+let partie = null;
+
+async function api(url, corps) {
+  const r = await fetch(url, corps === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(corps) });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 && url !== "/api/connexion") { montrerConnexion(); throw new Error("connexion requise"); }
+  if (!r.ok) throw new Error(j.erreur || ("erreur " + r.status));
+  return j;
+}
+function montrerConnexion() { $("connexion").hidden = false; $("jeu").hidden = true; $("barre").hidden = true; }
+function echapper(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function afficher(p) {
+  partie = p;
+  $("connexion").hidden = true; $("jeu").hidden = false; $("barre").hidden = false;
+  const ids = Object.keys(p.personnages);
+  $("persos").innerHTML = ids.map((id) => {
+    const c = p.personnages[id], s = c.calcul.stats;
+    return '<div class="carte"><b>' + echapper(c.base.nom) + '</b> <span class="petit">' + echapper(c.base.race + " " + c.base.classe + " niv. " + c.base.niveau) + '</span>' +
+      '<div class="petit">PV ' + c.etat.pv + "/" + c.calcul.pv_max + " - vitesse " + c.calcul.vitesse_m + " m - charge " + c.calcul.charge.etat + " (" + c.calcul.charge.poids + " kg)</div>" +
+      '<div class="stats">' + Object.keys(NOMS).map((k) => "<div>" + NOMS[k].slice(0, 4) + "<b>" + s[k] + "</b></div>").join("") + "</div>" +
+      (c.etat.effets.length ? '<div class="petit">Effets: ' + c.etat.effets.map((e) => echapper(e.champ + " " + (e.valeur > 0 ? "+" : "") + e.valeur + " (" + e.source + ")")).join(", ") + "</div>" : "") +
+      '<div class="petit">Objets: ' + (c.etat.inventaire.objets.map((o) => echapper(o.quantite + "x " + o.nom)).join(", ") || "rien") + " - " + c.etat.inventaire.po + " po</div></div>";
+  }).join("");
+  $("ajout").hidden = ids.length > 0 && !$("ajout").dataset.ouvert;
+  const sel = $("qui"), avant = sel.value;
+  sel.innerHTML = ids.map((id) => '<option value="' + id + '">' + echapper(p.personnages[id].base.nom) + "</option>").join("");
+  if (ids.includes(avant)) sel.value = avant;
+  const jet = p.jets_en_attente[0];
+  $("jet").hidden = !jet;
+  if (jet) {
+    const c = p.personnages[jet.cible];
+    $("jet").innerHTML = "<b>Jet demandé à " + echapper(c.base.nom) + "</b><div>" + echapper(jet.nom) + (jet.dd != null ? " (difficulté " + jet.dd + ")" : "") + (jet.avantage !== "normal" ? " - " + jet.avantage : "") + '</div><div class="petit">' + echapper(jet.raison) + '</div><div class="ligne"><button id="lancer">Lancer ' + echapper(jet.de) + "</button></div>";
+    $("lancer").onclick = () => lancer(jet);
+  }
+  $("histoire").innerHTML = p.texte.map((t) => '<div class="msg ' + (t.qui === "mj" ? "mj" : "joueur") + '">' + echapper(t.texte) + "</div>").join("");
+  $("dire").disabled = !!jet; $("texte").disabled = !!jet;
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+async function agir(fn, zone) {
+  $(zone || "err").textContent = "";
+  document.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  try { await fn(); } catch (e) { $(zone || "err").textContent = e.message; }
+  document.querySelectorAll("button").forEach((b) => (b.disabled = false));
+  if (partie) { $("dire").disabled = !!partie.jets_en_attente.length; }
+}
+async function lancer(jet) { await agir(async () => { const r = await api("/api/jets/" + jet.id + "/lancer", { perso: jet.cible }); afficher(r.partie); }); }
+
+$("entrer").onclick = () => agir(async () => { await api("/api/connexion", { mot_de_passe: $("mdp").value }); await charger(); }, "err-connexion");
+$("essai").onclick = () => { $("json").value = JSON.stringify(ESSAI, null, 1); };
+$("importer").onclick = () => agir(async () => {
+  let o; try { o = JSON.parse($("json").value); } catch { throw new Error("Le texte collé n'est pas valide."); }
+  await api("/api/personnages", o); $("json").value = ""; await charger();
+}, "err-ajout");
+$("dire").onclick = () => {
+  const t = $("texte").value.trim(); if (!t) return;
+  agir(async () => { $("texte").value = ""; const r = await api("/api/dire", { perso: $("qui").value, texte: t }); afficher(r.partie); });
+};
+$("texte").addEventListener("keydown", (e) => { if (e.key === "Enter") $("dire").click(); });
+$("annuler").onclick = () => agir(async () => { const r = await api("/api/annuler", {}); afficher(r.partie); });
+async function charger() { afficher(await api("/api/partie")); }
+charger().catch(() => {});
+</script>
+</body>
+</html>
