@@ -42,7 +42,7 @@ function creerGemini({ cle, modele, fetchFn }) {
         systemInstruction: { parts: [{ text: systeme }] },
         contents: versGemini(messages),
         tools: schemaOutils(outils),
-        generationConfig: { temperature: 0.9, maxOutputTokens: 1200 }
+        generationConfig: { temperature: 0.9, maxOutputTokens: 8192 }
       };
       const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(nom) + ":generateContent";
       const r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cle }, body: JSON.stringify(corps) });
@@ -56,8 +56,10 @@ function creerGemini({ cle, modele, fetchFn }) {
       const parts = (cand && cand.content && cand.content.parts) || [];
       const texte = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
       const appels = parts.filter((p) => p.functionCall).map((p) => ({ nom: p.functionCall.name, args: p.functionCall.args || {} }));
-      if (!parts.length && cand && cand.finishReason && cand.finishReason !== "STOP") {
-        throw new Error("Gemini n'a rien répondu (" + cand.finishReason + ")");
+      if (!texte && !appels.length) {
+        const raison = (cand && cand.finishReason) || (j.promptFeedback && j.promptFeedback.blockReason) || "inconnue";
+        console.error("Gemini réponse vide:", JSON.stringify(j).slice(0, 600));
+        throw new Error("Gemini n'a rien répondu (raison: " + raison + ")");
       }
       return { texte, appels, parts };
     }
