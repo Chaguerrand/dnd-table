@@ -51,7 +51,9 @@
     <div id="jet" class="carte jet" hidden></div>
     <div id="histoire"></div>
     <div class="ligne"><button class="sec" id="annuler">Annuler la dernière action</button></div>
+    <div id="attente" class="petit" hidden>Le MJ réfléchit...</div>
     <div id="err" class="erreur"></div>
+    <div class="petit" id="version" style="margin-top:24px"></div>
   </div>
 </main>
 <div class="barre" id="barre" hidden>
@@ -112,7 +114,10 @@ function afficher(p) {
 async function agir(fn, zone) {
   $(zone || "err").textContent = "";
   document.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  const t0 = Date.now(); $("attente").hidden = false;
+  const minuteur = setInterval(() => { $("attente").textContent = "Le MJ réfléchit... " + Math.round((Date.now() - t0) / 1000) + " s"; window.scrollTo(0, document.body.scrollHeight); }, 1000);
   try { await fn(); } catch (e) { $(zone || "err").textContent = e.message; if (partie) { try { afficher(await api("/api/partie")); } catch {} } }
+  clearInterval(minuteur); $("attente").hidden = true;
   document.querySelectorAll("button").forEach((b) => (b.disabled = false));
   if (partie) { $("dire").disabled = !!partie.jets_en_attente.length; }
 }
@@ -132,6 +137,7 @@ $("texte").addEventListener("keydown", (e) => { if (e.key === "Enter") $("dire")
 $("annuler").onclick = () => agir(async () => { const r = await api("/api/annuler", {}); afficher(r.partie); });
 async function charger() { afficher(await api("/api/partie")); }
 charger().catch(() => {});
+fetch("/sante").then((r) => r.json()).then((j) => { $("version").textContent = "Version " + j.version; }).catch(() => {});
 </script>
 </body>
 </html>

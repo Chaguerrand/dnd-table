@@ -54,7 +54,7 @@ function creerApp({ store, mj, env }) {
   app.disable("x-powered-by");
   app.use(express.json({ limit: "200kb" }));
 
-  app.get("/sante", (req, res) => res.json({ ok: true, mj: mj ? mj.nom : null, mot_de_passe: !!motDePasse }));
+  app.get("/sante", (req, res) => res.json({ ok: true, version: (env.RENDER_GIT_COMMIT || "local").slice(0, 7), mj: mj ? mj.nom : null, mot_de_passe: !!motDePasse }));
 
   app.post("/api/connexion", (req, res) => {
     if (motDePasse) {
