@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: dnd-table
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /sante
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TABLE_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

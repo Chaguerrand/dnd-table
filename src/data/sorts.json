@@ -1,0 +1,578 @@
+[
+ {
+  "id": "trait-de-feu",
+  "nom": "Trait de feu",
+  "niveau": 0,
+  "ecole": "Évocation",
+  "classes": [
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "36 m, 1d10 feu"
+ },
+ {
+  "id": "rayon-de-givre",
+  "nom": "Rayon de givre",
+  "niveau": 0,
+  "ecole": "Évocation",
+  "classes": [
+   "ensorceleur",
+   "magicien",
+   "occultiste"
+  ],
+  "effet": "18 m, 1d8 froid, vitesse -3 m"
+ },
+ {
+  "id": "decharge-occulte",
+  "nom": "Décharge occulte",
+  "niveau": 0,
+  "ecole": "Évocation",
+  "classes": [
+   "occultiste"
+  ],
+  "effet": "36 m, 1d10 force"
+ },
+ {
+  "id": "flamme-sacree",
+  "nom": "Flamme sacrée",
+  "niveau": 0,
+  "ecole": "Évocation",
+  "classes": [
+   "clerc"
+  ],
+  "effet": "18 m, 1d8 radiant"
+ },
+ {
+  "id": "moquerie-cruelle",
+  "nom": "Moquerie cruelle",
+  "niveau": 0,
+  "ecole": "Enchantement",
+  "classes": [
+   "barde"
+  ],
+  "effet": "18 m, 1d6 psychique"
+ },
+ {
+  "id": "flammes",
+  "nom": "Flammes",
+  "niveau": 0,
+  "ecole": "Invocation",
+  "classes": [
+   "druide"
+  ],
+  "effet": "Flamme lançable, 1d8 feu"
+ },
+ {
+  "id": "main-de-mage",
+  "nom": "Main de mage",
+  "niveau": 0,
+  "ecole": "Invocation",
+  "classes": [
+   "barde",
+   "ensorceleur",
+   "occultiste",
+   "magicien"
+  ],
+  "effet": "9 m, main spectrale"
+ },
+ {
+  "id": "lumiere",
+  "nom": "Lumière",
+  "niveau": 0,
+  "ecole": "Évocation",
+  "classes": [
+   "barde",
+   "clerc",
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "Contact, 1 h"
+ },
+ {
+  "id": "illusion-mineure",
+  "nom": "Illusion mineure",
+  "niveau": 0,
+  "ecole": "Illusion",
+  "classes": [
+   "barde",
+   "ensorceleur",
+   "occultiste",
+   "magicien"
+  ],
+  "effet": "9 m, son ou image"
+ },
+ {
+  "id": "prestidigitation",
+  "nom": "Prestidigitation",
+  "niveau": 0,
+  "ecole": "Transmutation",
+  "classes": [
+   "barde",
+   "ensorceleur",
+   "occultiste",
+   "magicien"
+  ],
+  "effet": "3 m, petits tours"
+ },
+ {
+  "id": "assistance",
+  "nom": "Assistance",
+  "niveau": 0,
+  "ecole": "Divination",
+  "classes": [
+   "clerc",
+   "druide"
+  ],
+  "effet": "+1d4 à un test"
+ },
+ {
+  "id": "reparation",
+  "nom": "Réparation",
+  "niveau": 0,
+  "ecole": "Transmutation",
+  "classes": [
+   "barde",
+   "clerc",
+   "druide",
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "Contact, 1 min"
+ },
+ {
+  "id": "contact-glacial",
+  "nom": "Contact glacial",
+  "niveau": 0,
+  "ecole": "Nécromancie",
+  "classes": [
+   "ensorceleur",
+   "occultiste",
+   "magicien"
+  ],
+  "effet": "Contact, 1d10 nécrotique"
+ },
+ {
+  "id": "poigne-electrique",
+  "nom": "Poigne électrique",
+  "niveau": 0,
+  "ecole": "Évocation",
+  "classes": [
+   "ensorceleur",
+   "magicien",
+   "occultiste"
+  ],
+  "effet": "Contact, 1d8 foudre"
+ },
+ {
+  "id": "thaumaturgie",
+  "nom": "Thaumaturgie",
+  "niveau": 0,
+  "ecole": "Transmutation",
+  "classes": [
+   "clerc"
+  ],
+  "effet": "9 m, petits prodiges"
+ },
+ {
+  "id": "druidisme",
+  "nom": "Druidisme",
+  "niveau": 0,
+  "ecole": "Transmutation",
+  "classes": [
+   "druide"
+  ],
+  "effet": "9 m, effets de nature"
+ },
+ {
+  "id": "gourdin-magique",
+  "nom": "Gourdin magique",
+  "niveau": 0,
+  "ecole": "Transmutation",
+  "classes": [
+   "druide"
+  ],
+  "effet": "Action bonus, 1 min"
+ },
+ {
+  "id": "stabilisation",
+  "nom": "Stabilisation",
+  "niveau": 0,
+  "ecole": "Nécromancie",
+  "classes": [
+   "clerc",
+   "druide"
+  ],
+  "effet": "4,5 m, stabilise à 0 PV"
+ },
+ {
+  "id": "projectile-magique",
+  "nom": "Projectile magique",
+  "niveau": 1,
+  "ecole": "Évocation",
+  "classes": [
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "36 m, 3 x (1d4+1) force"
+ },
+ {
+  "id": "bouclier",
+  "nom": "Bouclier",
+  "niveau": 1,
+  "ecole": "Abjuration",
+  "classes": [
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "Réaction, +5 CA"
+ },
+ {
+  "id": "armure-de-mage",
+  "nom": "Armure de mage",
+  "niveau": 1,
+  "ecole": "Abjuration",
+  "classes": [
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "Contact, 8 h, CA 13 + Agi"
+ },
+ {
+  "id": "mains-brulantes",
+  "nom": "Mains brûlantes",
+  "niveau": 1,
+  "ecole": "Évocation",
+  "classes": [
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "Cône 4,5 m, 3d6 feu"
+ },
+ {
+  "id": "sommeil",
+  "nom": "Sommeil",
+  "niveau": 1,
+  "ecole": "Enchantement",
+  "classes": [
+   "barde",
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "18 m, concentration"
+ },
+ {
+  "id": "charme-personne",
+  "nom": "Charme-personne",
+  "niveau": 1,
+  "ecole": "Enchantement",
+  "classes": [
+   "barde",
+   "druide",
+   "ensorceleur",
+   "occultiste",
+   "magicien"
+  ],
+  "effet": "9 m, 1 h"
+ },
+ {
+  "id": "vague-tonnante",
+  "nom": "Vague tonnante",
+  "niveau": 1,
+  "ecole": "Évocation",
+  "classes": [
+   "barde",
+   "druide",
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "Cube 4,5 m, 2d8 tonnerre"
+ },
+ {
+  "id": "detection-de-la-magie",
+  "nom": "Détection de la magie",
+  "niveau": 1,
+  "ecole": "Divination",
+  "classes": [
+   "barde",
+   "clerc",
+   "druide",
+   "paladin",
+   "rodeur",
+   "ensorceleur",
+   "occultiste",
+   "magicien"
+  ],
+  "effet": "Rituel, 10 min"
+ },
+ {
+  "id": "soins",
+  "nom": "Soins",
+  "niveau": 1,
+  "ecole": "Abjuration",
+  "classes": [
+   "barde",
+   "clerc",
+   "druide",
+   "paladin",
+   "rodeur"
+  ],
+  "effet": "Contact, 2d8 + mod."
+ },
+ {
+  "id": "mot-de-guerison",
+  "nom": "Mot de guérison",
+  "niveau": 1,
+  "ecole": "Abjuration",
+  "classes": [
+   "barde",
+   "clerc",
+   "druide"
+  ],
+  "effet": "18 m, 2d4 + mod."
+ },
+ {
+  "id": "benediction",
+  "nom": "Bénédiction",
+  "niveau": 1,
+  "ecole": "Enchantement",
+  "classes": [
+   "clerc",
+   "paladin"
+  ],
+  "effet": "9 m, +1d4, concentration"
+ },
+ {
+  "id": "bouclier-de-la-foi",
+  "nom": "Bouclier de la foi",
+  "niveau": 1,
+  "ecole": "Abjuration",
+  "classes": [
+   "clerc",
+   "paladin"
+  ],
+  "effet": "18 m, +2 CA"
+ },
+ {
+  "id": "chatiment-divin",
+  "nom": "Châtiment divin",
+  "niveau": 1,
+  "ecole": "Évocation",
+  "classes": [
+   "paladin"
+  ],
+  "effet": "+2d8 radiant"
+ },
+ {
+  "id": "marque-du-chasseur",
+  "nom": "Marque du chasseur",
+  "niveau": 1,
+  "ecole": "Divination",
+  "classes": [
+   "rodeur"
+  ],
+  "effet": "27 m, +1d6, 1 h"
+ },
+ {
+  "id": "baies-nourrissantes",
+  "nom": "Baies nourrissantes",
+  "niveau": 1,
+  "ecole": "Invocation",
+  "classes": [
+   "druide",
+   "rodeur"
+  ],
+  "effet": "10 baies, 1 PV chacune"
+ },
+ {
+  "id": "malefice",
+  "nom": "Maléfice",
+  "niveau": 1,
+  "ecole": "Enchantement",
+  "classes": [
+   "occultiste"
+  ],
+  "effet": "27 m, +1d6 nécrotique"
+ },
+ {
+  "id": "tentacules-de-hadar",
+  "nom": "Tentacules de Hadar",
+  "niveau": 1,
+  "ecole": "Invocation",
+  "classes": [
+   "occultiste"
+  ],
+  "effet": "Émanation 3 m, 2d6"
+ },
+ {
+  "id": "fleau",
+  "nom": "Fléau",
+  "niveau": 1,
+  "ecole": "Enchantement",
+  "classes": [
+   "barde",
+   "clerc",
+   "occultiste"
+  ],
+  "effet": "9 m, -1d4"
+ },
+ {
+  "id": "sanctuaire",
+  "nom": "Sanctuaire",
+  "niveau": 1,
+  "ecole": "Abjuration",
+  "classes": [
+   "clerc"
+  ],
+  "effet": "9 m, 1 min"
+ },
+ {
+  "id": "injonction",
+  "nom": "Injonction",
+  "niveau": 1,
+  "ecole": "Enchantement",
+  "classes": [
+   "barde",
+   "clerc",
+   "paladin",
+   "occultiste"
+  ],
+  "effet": "18 m, ordre d'un mot"
+ },
+ {
+  "id": "chatiment-tonitruant",
+  "nom": "Châtiment tonitruant",
+  "niveau": 1,
+  "ecole": "Évocation",
+  "classes": [
+   "paladin"
+  ],
+  "effet": "+2d6 tonnerre, repousse"
+ },
+ {
+  "id": "faveur-divine",
+  "nom": "Faveur divine",
+  "niveau": 1,
+  "ecole": "Transmutation",
+  "classes": [
+   "paladin"
+  ],
+  "effet": "+1d4 radiant, 1 min"
+ },
+ {
+  "id": "enchevetrement",
+  "nom": "Enchevêtrement",
+  "niveau": 1,
+  "ecole": "Invocation",
+  "classes": [
+   "druide",
+   "rodeur"
+  ],
+  "effet": "27 m, entrave"
+ },
+ {
+  "id": "nappe-de-brouillard",
+  "nom": "Nappe de brouillard",
+  "niveau": 1,
+  "ecole": "Invocation",
+  "classes": [
+   "druide",
+   "rodeur",
+   "ensorceleur",
+   "magicien"
+  ],
+  "effet": "36 m, 1 h"
+ },
+ {
+  "id": "communication-avec-les-animaux",
+  "nom": "Communication avec les animaux",
+  "niveau": 1,
+  "ecole": "Divination",
+  "classes": [
+   "barde",
+   "druide",
+   "rodeur",
+   "occultiste"
+  ],
+  "effet": "Rituel, 10 min"
+ },
+ {
+  "id": "grande-foulee",
+  "nom": "Grande foulée",
+  "niveau": 1,
+  "ecole": "Transmutation",
+  "classes": [
+   "barde",
+   "druide",
+   "rodeur",
+   "magicien"
+  ],
+  "effet": "Contact, +3 m"
+ },
+ {
+  "id": "purification-de-la-nourriture-et-de-l-eau",
+  "nom": "Purification de la nourriture et de l'eau",
+  "niveau": 1,
+  "ecole": "Transmutation",
+  "classes": [
+   "clerc",
+   "druide",
+   "paladin"
+  ],
+  "effet": "Rituel, 3 m"
+ },
+ {
+  "id": "armure-d-agathys",
+  "nom": "Armure d'Agathys",
+  "niveau": 1,
+  "ecole": "Abjuration",
+  "classes": [
+   "occultiste"
+  ],
+  "effet": "5 PV temporaires"
+ },
+ {
+  "id": "trait-ensorcele",
+  "nom": "Trait ensorcelé",
+  "niveau": 1,
+  "ecole": "Évocation",
+  "classes": [
+   "ensorceleur",
+   "occultiste",
+   "magicien"
+  ],
+  "effet": "18 m, 2d12 foudre"
+ },
+ {
+  "id": "fou-rire-de-tasha",
+  "nom": "Fou rire de Tasha",
+  "niveau": 1,
+  "ecole": "Enchantement",
+  "classes": [
+   "barde",
+   "occultiste",
+   "magicien"
+  ],
+  "effet": "9 m, concentration"
+ },
+ {
+  "id": "identification",
+  "nom": "Identification",
+  "niveau": 1,
+  "ecole": "Divination",
+  "classes": [
+   "barde",
+   "magicien"
+  ],
+  "effet": "Rituel, objet magique"
+ },
+ {
+  "id": "disque-flottant-de-tenser",
+  "nom": "Disque flottant de Tenser",
+  "niveau": 1,
+  "ecole": "Invocation",
+  "classes": [
+   "magicien"
+  ],
+  "effet": "9 m, 1 h, porte 250 kg"
+ }
+]
