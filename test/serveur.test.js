@@ -128,6 +128,6 @@ test("Gemini: conversion des outils et des messages, lecture de la réponse", as
   assert.equal(rep.appels[0].args.type, "long");
   assert.match(requete.url, /models\/m:generateContent$/);
   assert.equal(requete.opt.headers["x-goog-api-key"], "K");
-  const e = creerGemini({ cle: "K", fetchFn: async () => ({ ok: false, status: 429, text: async () => JSON.stringify({ error: { message: "quota" } }) }) });
+  const e = creerGemini({ cle: "K", fetchFn: async () => ({ ok: false, status: 400, text: async () => JSON.stringify({ error: { message: "quota" } }) }) });
   await assert.rejects(e.generer({ systeme: "s", messages: [{ role: "user", texte: "x" }], outils: [] }), /quota/);
 });

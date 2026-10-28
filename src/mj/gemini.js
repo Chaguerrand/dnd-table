@@ -44,13 +44,20 @@ function creerGemini({ cle, modele, fetchFn }) {
         tools: schemaOutils(outils),
         generationConfig: { temperature: 0.9, maxOutputTokens: 8192 }
       };
-      const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(nom) + ":generateContent";
-      const r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cle }, body: JSON.stringify(corps) });
-      const txt = await r.text();
-      let j; try { j = JSON.parse(txt); } catch { throw new Error("réponse Gemini illisible (" + r.status + ")"); }
-      if (!r.ok) {
-        const e = new Error((j.error && j.error.message) || ("erreur Gemini " + r.status));
-        e.status = r.status; throw e;
+      const attentes = [0, 2000, 5000, 9000]; // nouvelles tentatives si Google est surchargé
+      let j, r;
+      for (let i = 0; i < attentes.length; i++) {
+        if (attentes[i]) await new Promise((ok) => setTimeout(ok, attentes[i]));
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(nom) + ":generateContent";
+        r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cle }, body: JSON.stringify(corps) });
+        const txt = await r.text();
+        try { j = JSON.parse(txt); } catch { j = {}; }
+        if (r.ok) break;
+        const passager = [429, 500, 502, 503, 504].includes(r.status);
+        if (!passager || i === attentes.length - 1) {
+          const e = new Error((j.error && j.error.message) || ("erreur Gemini " + r.status));
+          e.status = r.status; throw e;
+        }
       }
       const cand = j.candidates && j.candidates[0];
       const parts = (cand && cand.content && cand.content.parts) || [];
