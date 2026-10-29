@@ -8,9 +8,9 @@ async function lancerDiag(cle, modeles) {
     const noms = (j.models || []).filter((m) => (m.supportedGenerationMethods || []).includes("generateContent")).map((m) => m.name.replace("models/", ""));
     console.log("DIAG modèles disponibles (" + r.status + "): " + noms.join(", "));
   } catch (e) { console.log("DIAG liste impossible: " + e.message); }
-  for (const m of modeles) {
+  await Promise.all(modeles.map(async (m) => {
     for (const reflexion of [true, false]) {
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 1; i++) {
         const t = Date.now();
         const gc = { maxOutputTokens: 300 };
         if (reflexion) gc.thinkingConfig = { thinkingLevel: "low" };
@@ -24,7 +24,7 @@ async function lancerDiag(cle, modeles) {
         } catch (e) { console.log("DIAG " + m + (reflexion ? " low" : " defaut") + " essai" + (i + 1) + ": " + e.message + " après " + ((Date.now() - t) / 1000).toFixed(1) + " s"); }
       }
     }
-  }
+  }));
   console.log("DIAG terminé");
 }
 module.exports = { lancerDiag };
