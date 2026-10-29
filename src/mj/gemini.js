@@ -32,46 +32,53 @@ function versGemini(messages) {
   });
 }
 
-function creerGemini({ cle, modele, fetchFn }) {
+// Appelle un modèle: jusqu'à `essais` tentatives si Google est surchargé ou ne répond pas.
+async function appelerModele(f, cle, nom, corps, essais) {
+  let derniere;
+  for (let i = 0; i < essais; i++) {
+    if (i) await new Promise((ok) => setTimeout(ok, 1500));
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(nom) + ":generateContent";
+    const t1 = Date.now();
+    let r, txt;
+    try {
+      r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cle }, body: JSON.stringify(corps), signal: AbortSignal.timeout(15000) });
+      txt = await r.text();
+    } catch (e) {
+      console.warn("Gemini " + nom + " sans réponse après " + Math.round((Date.now() - t1) / 1000) + " s (essai " + (i + 1) + "): " + e.message);
+      derniere = new Error("Gemini ne répond pas"); continue;
+    }
+    let j; try { j = JSON.parse(txt); } catch { j = {}; }
+    if (r.ok) { console.log("Gemini " + nom + " ok en " + Math.round((Date.now() - t1) / 100) / 10 + " s (essai " + (i + 1) + ")"); return j; }
+    const msg = (j.error && j.error.message) || ("erreur Gemini " + r.status);
+    if (r.status === 400 && corps.generationConfig.thinkingConfig && /think/i.test(msg)) {
+      delete corps.generationConfig.thinkingConfig; i--; continue; // ce modèle ne connait pas ce réglage
+    }
+    console.warn("Gemini " + nom + " " + r.status + " (essai " + (i + 1) + "): " + msg.slice(0, 120));
+    derniere = Object.assign(new Error(msg), { status: r.status });
+    if (![429, 500, 502, 503, 504].includes(r.status)) throw derniere;
+  }
+  throw derniere;
+}
+
+// modele: modèle principal; secours: autres modèles essayés si le principal est surchargé.
+function creerGemini({ cle, modele, secours, fetchFn }) {
   const f = fetchFn || fetch;
-  const nom = modele || "gemini-2.5-flash";
+  const chaine = [modele || "gemini-2.5-flash", ...(secours || [])];
   return {
-    nom: "gemini:" + nom,
+    nom: "gemini:" + chaine.join(">"),
     async generer({ systeme, messages, outils }) {
-      const corps = {
-        systemInstruction: { parts: [{ text: systeme }] },
-        contents: versGemini(messages),
-        tools: schemaOutils(outils),
-        generationConfig: { temperature: 0.9, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: "low" } }
-      };
-      const attentes = [0, 2000, 5000, 9000]; // nouvelles tentatives si Google est surchargé
-      let j, r;
-      const debut = Date.now();
-      for (let i = 0; i < attentes.length; i++) {
-        if (attentes[i]) await new Promise((ok) => setTimeout(ok, attentes[i]));
-        const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(nom) + ":generateContent";
-        const t1 = Date.now();
-        let txt;
-        try {
-          r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": cle }, body: JSON.stringify(corps), signal: AbortSignal.timeout(20000) });
-          txt = await r.text();
-        } catch (e) {
-          console.warn("Gemini sans réponse après " + Math.round((Date.now() - t1) / 1000) + " s (essai " + (i + 1) + "): " + e.message);
-          if (i === attentes.length - 1) throw new Error("Gemini ne répond pas (essayé " + attentes.length + " fois). Réessaie dans un moment.");
-          continue;
-        }
-        try { j = JSON.parse(txt); } catch { j = {}; }
-        if (r.ok) { console.log("Gemini ok en " + Math.round((Date.now() - debut) / 100) / 10 + " s (essai " + (i + 1) + ")"); break; }
-        if (r.status === 400 && corps.generationConfig.thinkingConfig && /think/i.test((j.error && j.error.message) || "")) {
-          delete corps.generationConfig.thinkingConfig; i--; attentes.push(0); continue; // ce modèle ne connait pas ce réglage
-        }
-        console.warn("Gemini " + r.status + " (essai " + (i + 1) + "): " + ((j.error && j.error.message) || "").slice(0, 120));
-        const passager = [429, 500, 502, 503, 504].includes(r.status);
-        if (!passager || i === attentes.length - 1) {
-          const e = new Error((j.error && j.error.message) || ("erreur Gemini " + r.status));
-          e.status = r.status; throw e;
-        }
+      let j, derniere;
+      for (let k = 0; k < chaine.length; k++) {
+        const corps = {
+          systemInstruction: { parts: [{ text: systeme }] },
+          contents: versGemini(messages),
+          tools: schemaOutils(outils),
+          generationConfig: { temperature: 0.9, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: "low" } }
+        };
+        try { j = await appelerModele(f, cle, chaine[k], corps, k === chaine.length - 1 ? 3 : 2); break; }
+        catch (e) { derniere = e; if (e.status && ![429, 500, 502, 503, 504].includes(e.status)) throw e; }
       }
+      if (!j) throw derniere || new Error("Gemini indisponible");
       const cand = j.candidates && j.candidates[0];
       const parts = (cand && cand.content && cand.content.parts) || [];
       const texte = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
