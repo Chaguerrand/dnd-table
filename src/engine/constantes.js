@@ -55,9 +55,11 @@ const PLAFOND_AVEC_EFFETS = 30;
 // les autres pouvoirs de classe et de race restent à définir.
 const POUVOIRS = {
   second_souffle: { nom: "Second souffle", max: 1, recharge: "court" },
-  endurance_de_pierre: { nom: "Endurance de pierre", max: 2, recharge: "long" }
+  endurance_de_pierre: { nom: "Endurance de pierre", max: 2, recharge: "long" },
+  // Ki du moine: max = niveau + modificateur de Zen, minimum 3 (calculé dans regles.pouvoirsDe), recharge au repos court.
+  ki: { nom: "Ki", max: 3, recharge: "court" }
 };
-const POUVOIRS_PAR_CLASSE = { guerrier: ["second_souffle"] };
+const POUVOIRS_PAR_CLASSE = { guerrier: ["second_souffle"], moine: ["ki"] };
 const POUVOIRS_PAR_RACE = { goliath: ["endurance_de_pierre"] };
 
 module.exports = {

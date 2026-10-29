@@ -81,7 +81,11 @@ function maitrise(perso, competence) {
 
 function pouvoirsDe(perso) {
   const ids = [...(C.POUVOIRS_PAR_CLASSE[classeDe(perso)] || []), ...(C.POUVOIRS_PAR_RACE[raceDe(perso)] || [])];
-  return ids.map((id) => ({ id, ...C.POUVOIRS[id] }));
+  return ids.map((id) => {
+    const d = { id, ...C.POUVOIRS[id] };
+    if (id === "ki") d.max = Math.max(3, perso.base.niveau + modStat(perso, "zen"));
+    return d;
+  });
 }
 
 function emplacementsMax(perso) {

@@ -65,13 +65,13 @@ async function api(url, corps) {
   const r = await fetch(url, corps === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(corps) });
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && j.etape) { montrerConnexion(j.etape); throw new Error("connexion requise"); }
-  if (!r.ok) throw new Error(j.erreur || ("erreur " + r.status));
+  if (!r.ok) throw Object.assign(new Error(j.erreur || ("erreur " + r.status)), { etape: j.etape });
   return j;
 }
 let modeCompte = "connexion";
 function montrerConnexion(etape) {
   $("connexion").hidden = false; $("app").hidden = true; $("reglages").hidden = true; etat.reglagesOuverts = false;
-  $("etape-table").hidden = etape !== "table"; $("etape-compte").hidden = etape !== "compte";
+  $("etape-table").hidden = etape !== "table"; $("etape-compte").hidden = etape !== "compte"; $("etape-aucune").hidden = etape !== "aucune";
   majModeCompte();
 }
 function majModeCompte() {
@@ -370,7 +370,7 @@ function ficheBase(c) {
   const autres = Object.values(etat.partie.personnages).filter((x) => !x.a_moi);
   const compagnons = autres.length ? '<div class="boite"><h2>À la table</h2>' + autres.map((x) =>
     '<div class="depli"><div class="corps" style="padding-top:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + echapper(x.base.nom) + '</b><span class="doux">' + echapper([x.base.race, x.base.classe, "niveau " + x.base.niveau].join(", ")) + "</span></div>" +
-    '<div class="tags"><span class="tag">PV ' + x.etat.pv + " / " + x.calcul.pv_max + "</span>" + (x.joueur ? '<span class="tag info">' + echapper(x.joueur) + "</span>" : "") +
+    '<div class="tags"><span class="tag">PV ' + x.etat.pv + " / " + x.calcul.pv_max + "</span>" + (x.ki ? '<span class="tag">Ki ' + x.ki.restant + " / " + x.ki.max + "</span>" : "") + (x.joueur ? '<span class="tag info">' + echapper(x.joueur) + "</span>" : "") +
     (x.equipe && x.equipe.length ? x.equipe.map((n) => '<span class="tag">' + echapper(n) + "</span>").join("") : '<span class="doux">Rien de visible porté</span>') + "</div></div></div>").join("") + "</div>" : "";
   return compagnons + '<div class="boite"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px"><h2>Caractéristiques</h2><span class="doux">Toucher pour voir la composition</span></div>' + stats + "</div>" +
     '<div class="boite"><h2>Bonus et malus actifs</h2>' + effets + "</div>" +
@@ -477,7 +477,7 @@ function rendreReglages() {
     '<div class="choix"><button type="button" class="on" style="cursor:default"><b>' + echapper(mien.base.nom) + "</b><span>" + echapper(mien.base.race + " " + mien.base.classe + ", niveau " + mien.base.niveau) + "</span></button></div>" :
     '<div class="doux">Tu n\'as pas encore de personnage à cette table.</div><a class="btn" href="/creation.html" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Créer un personnage</a><button type="button" class="btn sec" data-a="essai">Ajouter le personnage d\'essai</button>';
   const champ = (id, ph) => '<input id="' + id + '" type="password" maxlength="8" autocomplete="off" autocapitalize="off" placeholder="' + ph + '">';
-  const compte = '<div class="boite"><h2>Compte</h2><div>Pseudo : <b>' + echapper(moi.pseudo || "") + "</b>" + (orga ? ' <span class="tag info">Organisateur</span>' : "") + "</div>" +
+  const compte = '<div class="boite"><h2>Compte</h2><div>Pseudo : <b>' + echapper(moi.pseudo || "") + "</b>" + (moi.superadmin ? ' <span class="tag info">Superadmin</span>' : orga ? ' <span class="tag info">Organisateur</span>' : "") + "</div>" +
     '<div class="doux">Changer mon code (8 lettres ou chiffres)</div>' + champ("code-ancien", "Code actuel") + champ("code-nouveau", "Nouveau code") +
     '<button type="button" class="btn sec" data-a="changer-code">Changer mon code</button>' +
     '<button type="button" class="btn sec" data-a="deconnexion">Me déconnecter</button></div>';
@@ -487,7 +487,7 @@ function rendreReglages() {
     if (!o) organisateur = '<div class="boite"><h2>Organisateur</h2><div class="doux">Chargement...</div></div>';
     else organisateur = '<div class="boite"><h2>Organisateur</h2><div class="doux">Joueurs de la table</div>' +
       o.joueurs.map((j, i) => '<div class="depli"><div class="corps" style="padding-top:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + echapper(j.pseudo) + '</b><span class="doux">' + (j.personnages.map((x) => echapper(x.nom)).join(", ") || "aucun personnage") + "</span></div>" +
-        '<input id="reinit-' + i + '" type="text" maxlength="8" autocomplete="off" autocapitalize="off" placeholder="Nouveau code (8 caractères)"><button type="button" class="btn sec" data-a="reinit" data-v="' + i + '">Réinitialiser son code</button></div></div>').join("") +
+        (moi.superadmin ? '<input id="reinit-' + i + '" type="text" maxlength="8" autocomplete="off" autocapitalize="off" placeholder="Nouveau code (8 caractères)"><button type="button" class="btn sec" data-a="reinit" data-v="' + i + '">Réinitialiser son code</button>' : "") + "</div></div>").join("") +
       (o.sans_joueur.length ? '<div class="doux">Personnages sans joueur</div>' + o.sans_joueur.map((x, i) => '<div class="depli"><div class="corps" style="padding-top:12px"><b>' + echapper(x.nom) + '</b><select id="attr-' + i + '">' + o.joueurs.map((j) => '<option value="' + echapper(j.pseudo) + '">' + echapper(j.pseudo) + "</option>").join("") + '</select><button type="button" class="btn sec" data-a="attribuer" data-v="' + i + '">Attribuer à ce joueur</button></div></div>').join("") : "") + "</div>";
   }
   $("c-reglages").innerHTML =
@@ -584,6 +584,7 @@ $("entrer").onclick = async () => {
   try { await api("/api/connexion", { mot_de_passe: $("mdp").value }); await demarrer(); }
   catch (e) { if (e.message !== "connexion requise") $("err-connexion").textContent = e.message; }
 };
+$("deco-aucune").onclick = async () => { await api("/api/compte/deconnexion", {}).catch(() => {}); modeCompte = "connexion"; montrerConnexion("compte"); };
 $("mdp").addEventListener("keydown", (e) => { if (e.key === "Enter") $("entrer").click(); });
 $("valider-compte").onclick = async () => {
   $("err-compte").textContent = "";
@@ -612,8 +613,17 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) sond
 window.addEventListener("resize", () => { if (etat.partie) appliquerMise(); });
 
 async function demarrer() {
-  const p = await api("/api/partie");
-  afficher(p);
+  try {
+    const p = await api("/api/partie");
+    afficher(p);
+  } catch (e) {
+    // Compte valide mais invité à aucune table: on l'explique, avec le pseudo à communiquer à l'organisateur.
+    if (e.etape === "aucune_table") {
+      const c = await api("/api/compte").catch(() => null);
+      $("pseudo-aucune").textContent = c ? c.moi.pseudo : "";
+      montrerConnexion("aucune");
+    }
+  }
 }
 fetch("/sante").then((r) => r.json()).then((j) => { etat.serveur = { mot_de_passe: !!j.mot_de_passe, version: j.version }; $("version").textContent = "Version " + j.version; }).catch(() => {});
 document.documentElement.setAttribute("data-theme", THEMES[etat.theme] ? etat.theme : "commonwealth");

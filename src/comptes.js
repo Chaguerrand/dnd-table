@@ -6,6 +6,8 @@ const CLE = "joueurs";
 const CODE_OK = /^[A-Za-z0-9]{8}$/;
 const PSEUDO_OK = /^[\p{L}\p{N}_ -]{2,24}$/u;
 
+// Les anciens comptes portent le rôle "organisateur": c'est devenu "superadmin" (l'organisateur est désormais un rôle par table).
+const roleDe = (r) => (r === "organisateur" || r === "superadmin" ? "superadmin" : "joueur");
 const cleDe = (pseudo) => String(pseudo || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ");
 
 function hacher(code, sel) {
@@ -53,12 +55,12 @@ function creerComptes(store, env) {
     cleDe,
     async lister() {
       const { donnees } = await charger();
-      return Object.keys(donnees.joueurs).map((k) => ({ cle: k, pseudo: donnees.joueurs[k].pseudo, role: donnees.joueurs[k].role }));
+      return Object.keys(donnees.joueurs).map((k) => ({ cle: k, pseudo: donnees.joueurs[k].pseudo, role: roleDe(donnees.joueurs[k].role) }));
     },
     async lire(cle) {
       const { donnees } = await charger();
       const j = donnees.joueurs[cle];
-      return j ? { cle, pseudo: j.pseudo, role: j.role } : null;
+      return j ? { cle, pseudo: j.pseudo, role: roleDe(j.role) } : null;
     },
     async creer(pseudo, code) {
       verifierFormat(pseudo, code);
@@ -68,8 +70,8 @@ function creerComptes(store, env) {
         const sel = crypto.randomBytes(16).toString("hex");
         const premier = Object.keys(d.joueurs).length === 0;
         const organisateur = organisateurEnv ? cle === organisateurEnv : premier;
-        d.joueurs[cle] = { pseudo: String(pseudo).trim(), sel, hash: hacher(code, sel), role: organisateur ? "organisateur" : "joueur", cree: new Date().toISOString() };
-        return { cle, pseudo: d.joueurs[cle].pseudo, role: d.joueurs[cle].role };
+        d.joueurs[cle] = { pseudo: String(pseudo).trim(), sel, hash: hacher(code, sel), role: organisateur ? "superadmin" : "joueur", cree: new Date().toISOString() };
+        return { cle, pseudo: d.joueurs[cle].pseudo, role: roleDe(d.joueurs[cle].role) };
       });
     },
     async verifier(pseudo, code, ip) {
@@ -80,7 +82,7 @@ function creerComptes(store, env) {
       const j = donnees.joueurs[cle];
       const ok = j && String(code || "").length > 0 && crypto.timingSafeEqual(Buffer.from(hacher(code, j.sel), "hex"), Buffer.from(j.hash, "hex"));
       if (!ok) { echec(lim); throw erreur("Pseudo ou code incorrect.", 401); }
-      return { cle, pseudo: j.pseudo, role: j.role };
+      return { cle, pseudo: j.pseudo, role: roleDe(j.role) };
     },
     async changerCode(cle, ancien, nouveau, ip) {
       if (!CODE_OK.test(String(nouveau || ""))) throw erreur("Le code doit faire exactement 8 caractères : lettres et chiffres.");

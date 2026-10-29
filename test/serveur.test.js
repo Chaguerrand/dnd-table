@@ -8,6 +8,8 @@ const { creerApp } = require("../src/app");
 const { creerFichier } = require("../src/store/file");
 const { creerGemini, versGemini, schemaOutils, nettoyer } = require("../src/mj/gemini");
 const A = require("../src/engine/actions");
+const { nouvellePartie, importerPersonnage } = require("../src/engine/partie");
+const { creerComptes } = require("../src/comptes");
 
 const stats = { sol: 16, per: 12, end: 14, cha: 10, int: 10, agi: 10, lot: 10, zen: 8 };
 const KORGA = {
@@ -190,7 +192,7 @@ test("comptes: format du code, doublon, connexion, mauvais code, premier compte 
     assert.equal((await s.post("/api/compte/creer", { pseudo: "Anna", code: "abcd-123" })).status, 400);
     const a = await s.post("/api/compte/creer", { pseudo: "Anna", code: "motDe8Ch" });
     assert.equal(a.status, 200);
-    assert.equal((await a.json()).moi.role, "organisateur");
+    assert.equal((await a.json()).moi.role, "superadmin");
     assert.equal((await s.post("/api/compte/creer", { pseudo: "anna", code: "motDe8Ch" })).status, 409);
     const b = await s.post("/api/compte/creer", { pseudo: "Bob", code: "12345678" });
     assert.equal((await b.json()).moi.role, "joueur");
@@ -208,7 +210,9 @@ async function deuxJoueurs(mj) {
   const orga = await creer("Orga"), bob = await creer("Bob");
   const p = (c) => (u, corps) => fetch(s.base + u, { method: "POST", headers: { "content-type": "application/json", cookie: c }, body: JSON.stringify(corps || {}) });
   const g = (c) => (u) => fetch(s.base + u, { headers: { cookie: c } });
-  return { s, orga: { post: p(orga), get: g(orga) }, bob: { post: p(bob), get: g(bob) } };
+  const sortie = { s, orga: { post: p(orga), get: g(orga) }, bob: { post: p(bob), get: g(bob) } };
+  await sortie.orga.post("/api/tables/t1/inviter", { pseudo: "Bob" }); // l'accès à une table se fait sur invitation
+  return sortie;
 }
 const MIRA = { id: "mira", base: { ...KORGA.base, nom: "Mira", taille: "Moyenne" }, etat: KORGA.etat };
 
@@ -261,4 +265,160 @@ test("messages privés: /dmj et chuchoter ne sont vus que du destinataire", asyn
     assert.ok(vuB.texte.some((t) => /lame/.test(t.texte)));
     assert.ok(vuB.texte.some((t) => /poche/.test(t.texte)));
   } finally { s.fermer(); }
+});
+
+// ---- Tables multiples, invitations, organisateur délégué, ki, migration ----
+const MOINE = { id: "lin", base: { ...KORGA.base, nom: "Lin", race: "Humain", classe: "Moine", taille: "Moyenne", niveau: 3 }, etat: KORGA.etat };
+
+async function troisComptes() {
+  const s = await demarrer(null, {}, { sansCompte: true });
+  const creer = async (pseudo) => {
+    const r = await fetch(s.base + "/api/compte/creer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pseudo, code: "Abcd1234" }) });
+    return r.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+  };
+  const cl = async (pseudo) => {
+    const c = await creer(pseudo);
+    return {
+      post: (u, corps, h) => fetch(s.base + u, { method: "POST", headers: { "content-type": "application/json", cookie: c, ...(h || {}) }, body: JSON.stringify(corps || {}) }),
+      get: (u, h) => fetch(s.base + u, { headers: { cookie: c, ...(h || {}) } })
+    };
+  };
+  return { s, admin: await cl("Admin"), eve: await cl("Eve"), max: await cl("Max") };
+}
+
+test("tables: accès sur invitation seulement, création réservée au superadmin", async () => {
+  const { s, admin, eve } = await troisComptes();
+  try {
+    assert.equal((await eve.post("/api/tables", { nom: "Ma table" })).status, 403);
+    const t = await (await admin.post("/api/tables", { nom: "Les mines" })).json();
+    // Eve n'est invitée nulle part: aucune table, rien à lire
+    const r = await eve.get("/api/partie");
+    assert.equal(r.status, 403);
+    assert.equal((await r.json()).etape, "aucune_table");
+    assert.equal((await eve.get("/api/partie", { "x-table": t.id })).status, 403);
+    assert.deepEqual(await (await eve.get("/api/tables")).json(), []);
+    // invitation: seul l'organisateur de la table invite
+    assert.equal((await eve.post("/api/tables/" + t.id + "/inviter", { pseudo: "Eve" })).status, 403);
+    assert.equal((await admin.post("/api/tables/" + t.id + "/inviter", { pseudo: "Eve" })).status, 200);
+    assert.equal((await admin.post("/api/tables/" + t.id + "/inviter", { pseudo: "Inconnu" })).status, 404);
+    assert.equal((await eve.get("/api/partie", { "x-table": t.id })).status, 200);
+    const liste = await (await eve.get("/api/tables")).json();
+    assert.equal(liste.length, 1);
+    assert.equal(liste[0].role, "joueur");
+    assert.equal(liste[0].membres, undefined); // un simple joueur ne voit pas la liste des membres
+    // le superadmin entre sur n'importe quelle table sans invitation
+    assert.equal((await admin.get("/api/partie", { "x-table": t.id })).status, 200);
+    // retrait
+    await admin.post("/api/tables/" + t.id + "/retirer", { pseudo: "Eve" });
+    assert.equal((await eve.get("/api/partie", { "x-table": t.id })).status, 403);
+  } finally { s.fermer(); }
+});
+
+test("tables: personnage de la bibliothèque, un seul actif par table, réutilisable ailleurs", async () => {
+  const { s, admin, eve } = await troisComptes();
+  try {
+    const t1 = await (await admin.post("/api/tables", { nom: "Quête A" })).json();
+    const t2 = await (await admin.post("/api/tables", { nom: "Quête B" })).json();
+    await admin.post("/api/tables/" + t1.id + "/inviter", { pseudo: "Eve" });
+    await admin.post("/api/tables/" + t2.id + "/inviter", { pseudo: "Eve" });
+    // création hors table (rejoindre:false): il va dans la bibliothèque
+    assert.equal((await eve.post("/api/personnages", { ...KORGA, rejoindre: false })).status, 200);
+    assert.equal((await eve.post("/api/personnages", { ...KORGA, rejoindre: false })).status, 409);
+    assert.equal((await eve.post("/api/personnages", { ...MIRA, rejoindre: false })).status, 200);
+    assert.equal((await (await eve.get("/api/personnages")).json()).length, 2);
+    assert.equal((await eve.post("/api/tables/" + t1.id + "/rejoindre", { perso: "korga" })).status, 200);
+    assert.equal((await eve.post("/api/tables/" + t1.id + "/rejoindre", { perso: "mira" })).status, 409); // un seul actif par table
+    assert.equal((await eve.post("/api/tables/" + t2.id + "/rejoindre", { perso: "mira" })).status, 200); // l'autre table, un autre personnage
+    assert.equal((await eve.post("/api/tables/" + t2.id + "/rejoindre", { perso: "inexistant" })).status, 404);
+    const v1 = await (await eve.get("/api/partie", { "x-table": t1.id })).json();
+    const v2 = await (await eve.get("/api/partie", { "x-table": t2.id })).json();
+    assert.deepEqual(Object.keys(v1.personnages), ["korga"]);
+    assert.deepEqual(Object.keys(v2.personnages), ["mira"]);
+    // sans en-tête et avec deux tables, il faut choisir
+    const amb = await eve.get("/api/partie");
+    assert.equal(amb.status, 400);
+    assert.equal((await amb.json()).etape, "choix_table");
+  } finally { s.fermer(); }
+});
+
+test("tables: organisateur délégué, droits limités à sa table", async () => {
+  const { s, admin, eve, max } = await troisComptes();
+  try {
+    const ta = await (await admin.post("/api/tables", { nom: "Table d'Eve" })).json();
+    const tb = await (await admin.post("/api/tables", { nom: "Autre table" })).json();
+    assert.equal((await eve.post("/api/tables/" + ta.id + "/organisateur", { pseudo: "Eve" })).status, 403); // seul le superadmin délègue
+    assert.equal((await admin.post("/api/tables/" + ta.id + "/organisateur", { pseudo: "Eve" })).status, 200);
+    // Eve organise la table A: elle invite, voit la sauvegarde, annule
+    assert.equal((await eve.post("/api/tables/" + ta.id + "/inviter", { pseudo: "Max" })).status, 200);
+    assert.equal((await eve.get("/api/sauvegarde", { "x-table": ta.id })).status, 200);
+    assert.equal((await eve.get("/api/tables")).status, 200);
+    const l = await (await eve.get("/api/tables")).json();
+    assert.equal(l.length, 1);
+    assert.deepEqual(l[0].membres.sort(), ["Eve", "Max"]);
+    // mais pas la table B, ni les droits du superadmin
+    assert.equal((await eve.get("/api/sauvegarde", { "x-table": tb.id })).status, 403);
+    assert.equal((await eve.post("/api/tables/" + tb.id + "/inviter", { pseudo: "Max" })).status, 403);
+    assert.equal((await eve.post("/api/tables", { nom: "Nouvelle" })).status, 403);
+    assert.equal((await eve.post("/api/organisateur/reinitialiser", { pseudo: "Max", code: "Nouveau1" })).status, 403);
+    // l'organisateur retiré de la délégation redevient simple membre
+    await admin.post("/api/tables/" + ta.id + "/organisateur", { pseudo: "" });
+    assert.equal((await eve.get("/api/sauvegarde", { "x-table": ta.id })).status, 403);
+    // le superadmin garde la main partout
+    assert.equal((await admin.post("/api/organisateur/reinitialiser", { pseudo: "Max", code: "Nouveau1" })).status, 200);
+    assert.equal((await max.get("/api/partie")).status, 200);
+  } finally { s.fermer(); }
+});
+
+test("ki du moine: visible par les autres joueurs, décompté à l'usage", async () => {
+  const { s, admin, eve } = await troisComptes();
+  try {
+    const t = await (await admin.post("/api/tables", { nom: "Dojo" })).json();
+    await admin.post("/api/tables/" + t.id + "/inviter", { pseudo: "Eve" });
+    await eve.post("/api/personnages", { ...MOINE, rejoindre: false });
+    assert.equal((await eve.post("/api/tables/" + t.id + "/rejoindre", { perso: "lin" })).status, 200);
+    const h = { "x-table": t.id };
+    let v = await (await admin.get("/api/partie", h)).json(); // le superadmin n'est pas le propriétaire: il voit la vue réduite
+    assert.equal(v.personnages.lin.reduit, true);
+    assert.ok(v.personnages.lin.ki.max >= 3);
+    assert.equal(v.personnages.lin.ki.restant, v.personnages.lin.ki.max);
+    const r = await admin.post("/api/action", { action: "utiliser_pouvoir", params: { cible: "lin", pouvoir: "ki" } }, h);
+    assert.equal(r.status, 200);
+    v = await (await admin.get("/api/partie", h)).json();
+    assert.equal(v.personnages.lin.ki.restant, v.personnages.lin.ki.max - 1);
+    await admin.post("/api/action", { action: "repos", params: { type: "court" } }, h);
+    v = await (await admin.get("/api/partie", h)).json();
+    assert.equal(v.personnages.lin.ki.restant, v.personnages.lin.ki.max);
+  } finally { s.fermer(); }
+});
+
+test("migration: la partie existante devient la table n°1, ses joueurs en sont membres, ancien rôle devient superadmin", async () => {
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), "table-"));
+  const store = creerFichier(dossier);
+  // données d'avant les tables: une partie avec un personnage appartenant au compte "anna", un compte au rôle "organisateur"
+  const partie = nouvellePartie("Ancienne partie");
+  const p = importerPersonnage(partie, { id: "korga", base: KORGA.base, etat: KORGA.etat });
+  p.joueur = "anna";
+  await store.ecrire("partie", partie, 0);
+  await store.ecrire("joueurs", { joueurs: { anna: { pseudo: "Anna", sel: "00", hash: "00", role: "organisateur" } } }, 0);
+  const comptes = creerComptes(store, {});
+  assert.equal((await comptes.lire("anna")).role, "superadmin");
+  const app = creerApp({ store, mj: null, env: {} });
+  const srv = await new Promise((ok) => { const x = app.listen(0, () => ok(x)); });
+  const base = "http://127.0.0.1:" + srv.address().port;
+  try {
+    const c = (await fetch(base + "/api/compte/creer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pseudo: "Bea", code: "Abcd1234" }) }));
+    assert.equal(c.status, 200);
+    const cookie = c.headers.getSetCookie().map((x) => x.split(";")[0]).join("; ");
+    // Bea n'est membre de rien
+    const r = await fetch(base + "/api/partie", { headers: { cookie } });
+    assert.equal(r.status, 403);
+    // table n°1 existe sous le nom de l'ancienne partie et contient bien le personnage; anna en est membre et son perso est dans sa bibliothèque
+    const { creerTables } = require("../src/tables");
+    const t = creerTables(store);
+    const t1 = await t.lire("t1");
+    assert.equal(t1.nom, "Ancienne partie");
+    assert.deepEqual(t1.membres, ["anna"]);
+    assert.equal((await t.persosDe("anna")).length, 1);
+    assert.ok((await t.gestion("t1").lire()).personnages.korga);
+  } finally { srv.close(); }
 });
