@@ -238,6 +238,7 @@ async function demanderSuite() {
 async function agir(fn) {
   if (etat.occupe) return;
   etat.occupe = true; $("err").textContent = ""; majControles();
+  if (!etat.jetEnCours) { $("zone-jet").innerHTML = ""; cleJet = ""; } // le dé du tour précédent disparaît
   const t0 = Date.now();
   const att = $("attente"); att.hidden = false; att.textContent = "Le MJ réfléchit... 0 s";
   const minuteur = setInterval(() => { att.textContent = "Le MJ réfléchit... " + Math.round((Date.now() - t0) / 1000) + " s"; }, 1000);
