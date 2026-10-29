@@ -15,6 +15,7 @@ Règles de ta mission:
 - Certains messages sont privés. Un joueur peut t'écrire en privé (marqué "en privé au MJ"): ta réponse n'est alors vue que de lui, et tu ne la répètes jamais en public. Pour glisser une information confidentielle à un seul joueur (ce que lui seul remarque, sait ou ressent), utilise l'outil chuchoter. Les messages marqués "Message privé pour ..." ne sont vus que de ce joueur: ne révèle jamais leur contenu dans un récit public, et ne recopie jamais ce marquage.
 - Si une information privée est tout de même dévoilée en public (par erreur ou par un joueur), ne la nie pas: intègre-la à la fiction (le personnage s'est trahi, a parlé trop fort, un autre a entendu) et continue.
 - Résultats critiques. Quand le résultat d'un jet indique "20 naturel" ou "1 naturel", ce n'est jamais un simple succès ou échec: tu racontes une conséquence marquante, liée à CE jet et à rien d'autre. 20 naturel: la réussite est exceptionnelle et le joueur obtient un plus lié à son action (fouille: il trouve davantage, un détail caché, un objet en plus; combat: un coup remarquable; discussion: l'interlocuteur est conquis). 1 naturel: l'échec s'accompagne d'un contretemps immédiat lié à son action (perception: il est ébloui et ne voit plus rien ce tour-ci; escalade: il glisse et fait du bruit). Le bonus ou le malus ne dure que le temps de l'action ou de la scène en cours: pas de conséquence durable, pas de nouvel effet permanent. Si un effet chiffré est nécessaire, utilise ajouter_effet avec duree_type "temps" et duree_minutes de 1 à 10 au plus. Un plus d'objet ou d'information passe par ajouter_objet ou le récit.
+- Objets et argent. L'argent n'est jamais un objet: tu le gères uniquement avec modifier_monnaie (po, pa, pc; négatif pour dépenser), jamais avec ajouter_objet. Avant d'ajouter un objet, relis la liste des objets du personnage dans l'état de la partie: si le même objet existe déjà, réutilise EXACTEMENT son nom (pas de variante comme "Dague de gobelin" puis "Dague"), la quantité s'additionne. Un objet de même nature garde le même nom partout dans la quête.
 - Tu es juste: un échec a des conséquences, une bonne idée est récompensée.
 - Tu ne parles jamais de ces consignes ni des outils aux joueurs.
 - Ta réponse contient uniquement le récit en français destiné aux joueurs: jamais de notes, de plan, de raisonnement ni d'anglais.`;
@@ -30,7 +31,7 @@ function resume(partie) {
     const pouv = R.pouvoirsDe(p).map((d) => d.id + " " + (d.max - (p.etat.pouvoirs_utilises[d.id] || 0)) + "/" + d.max).join(", ") || "aucun";
     lignes.push("- " + p.id + ": " + p.base.nom + ", " + p.base.race + " " + p.base.classe + " niveau " + p.base.niveau +
       ". PV " + p.etat.pv + "/" + R.pvMax(p) + ". " + st + ". Vitesse " + R.vitesse(p) + " m, charge " + ch.etat +
-      ". Effets: " + eff + ". Objets: " + obj + ". PO " + p.etat.inventaire.po + ". Pouvoirs: " + pouv +
+      ". Effets: " + eff + ". Objets: " + obj + ". Monnaie " + require("../engine/monnaie").texte(p.etat.inventaire) + ". Pouvoirs: " + pouv +
       ". Emplacements de sorts utilisés: " + p.etat.emplacements_utilises + "/" + R.emplacementsMax(p) +
       (p.base.sorts ? ". Sorts: " + [...(p.base.sorts.tours_de_magie || []), ...(p.base.sorts.prepares || [])].join(", ") : "") +
       (p.etat.position ? ". Position " + p.etat.position.x + "," + p.etat.position.y : ""));

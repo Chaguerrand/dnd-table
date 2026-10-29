@@ -181,6 +181,53 @@ test("objectifs et journal de quête", () => {
 
 test("déclarations d'outils: une par action, schéma complet", () => {
   const d = A.declarationsOutils();
-  assert.equal(d.length, 16);
+  assert.equal(d.length, 17);
   assert.ok(d.every((x) => x.nom && x.description && x.parametres));
+});
+
+// ---- Monnaie et empilement des objets ----
+const Mn = require("../src/engine/monnaie");
+
+test("monnaie: ajout, conversion automatique, dépense, solde insuffisant", () => {
+  const p = creer();
+  let r = A.appliquer(p, "modifier_monnaie", { cible: "korga", pc: 15 }, "mj");
+  assert.equal(r.ok, true);
+  assert.equal(r.resultat.monnaie, "10 po 1 pa 5 pc");
+  r = A.appliquer(p, "modifier_monnaie", { cible: "korga", pc: 8 }, "mj");
+  assert.equal(r.resultat.monnaie, "10 po 2 pa 3 pc"); // 23 pc deviennent 2 pa 3 pc, aucun doublon
+  r = A.appliquer(p, "modifier_monnaie", { cible: "korga", po: -3 }, "mj");
+  assert.equal(r.resultat.monnaie, "7 po 2 pa 3 pc");
+  r = A.appliquer(p, "modifier_monnaie", { cible: "korga", po: -50 }, "mj");
+  assert.equal(r.ok, false);
+  assert.match(r.erreur, /pas assez/);
+  assert.equal(A.appliquer(p, "modifier_monnaie", { cible: "korga" }, "mj").ok, false);
+  assert.equal(p.personnages.korga.etat.inventaire.po, 7);
+});
+
+test("l'argent n'est pas un objet: refus, et un même objet s'empile sans doublon", () => {
+  const p = creer();
+  const refus = A.appliquer(p, "ajouter_objet", { cible: "korga", nom: "Pièces de cuivre gobelines", categorie: "tresors", quantite: 15, poids_kg: 0.01 }, "mj");
+  assert.equal(refus.ok, false);
+  assert.match(refus.erreur, /modifier_monnaie/);
+  assert.equal(A.appliquer(p, "ajouter_objet", { cible: "korga", nom: "Potion de soin", categorie: "potions", quantite: 1, poids_kg: 0.5 }, "mj").ok, true);
+  const r = A.appliquer(p, "ajouter_objet", { cible: "korga", nom: "Potions de soin", categorie: "potions", quantite: 2, poids_kg: 0.4 }, "mj");
+  assert.equal(r.ok, true);
+  const potions = p.personnages.korga.etat.inventaire.objets.filter((o) => /potion/i.test(o.nom));
+  assert.equal(potions.length, 1);
+  assert.equal(potions[0].quantite, 3);
+});
+
+test("reprise des anciennes données: les pièces en objets deviennent de la monnaie", () => {
+  const p = creer();
+  const objets = p.personnages.korga.etat.inventaire.objets;
+  objets.push({ id: "obj-90", nom: "Pièces de cuivre gobelines", categorie: "tresors", quantite: 15, poids_kg: 0.01, equipe: false, stats: {}, effets_portes: [], quete: null });
+  objets.push({ id: "obj-91", nom: "Pièces de cuivre", categorie: "tresors", quantite: 8, poids_kg: 0.01, equipe: false, stats: {}, effets_portes: [], quete: null });
+  objets.push({ id: "obj-92", nom: "Collier de dents de gobelin", categorie: "divers", quantite: 1, poids_kg: 0.1, equipe: false, stats: {}, effets_portes: [], quete: null });
+  assert.equal(Mn.harmoniser(p), 2);
+  const inv = p.personnages.korga.etat.inventaire;
+  assert.equal(Mn.texte(inv), "10 po 2 pa 3 pc");
+  assert.ok(inv.objets.some((o) => /Collier/.test(o.nom)));
+  assert.ok(!inv.objets.some((o) => /Pièces/.test(o.nom)));
+  assert.equal(Mn.harmoniser(p), 0); // idempotent
+  assert.equal(Mn.texte(inv), "10 po 2 pa 3 pc");
 });

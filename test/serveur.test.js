@@ -123,7 +123,7 @@ test("modifications simultanées: pas de perte (verrou)", async () => {
 
 test("Gemini: conversion des outils et des messages, lecture de la réponse", async () => {
   const outils = schemaOutils(A.declarationsOutils())[0].functionDeclarations;
-  assert.equal(outils.length, 16);
+  assert.equal(outils.length, 17);
   const d = outils.find((o) => o.name === "demander_jet");
   assert.deepEqual(d.parameters.required.sort(), ["cible", "nom", "type"]);
   const m = versGemini([{ role: "user", texte: "a" }, { role: "mj", texte: "b", appels: [{ nom: "repos", args: { type: "court" } }] }, { role: "outil", reponses: [{ nom: "repos", contenu: { ok: true } }] }]);

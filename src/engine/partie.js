@@ -42,6 +42,8 @@ function importerPersonnage(partie, entree) {
   etat.effets = etat.effets || [];
   etat.inventaire = etat.inventaire || { po: 0, objets: [] };
   etat.inventaire.po = etat.inventaire.po || 0;
+  etat.inventaire.pa = etat.inventaire.pa || 0;
+  etat.inventaire.pc = etat.inventaire.pc || 0;
   etat.inventaire.objets = normaliserObjets(etat.inventaire.objets);
   etat.emplacements_utilises = etat.emplacements_utilises || 0;
   etat.pouvoirs_utilises = etat.pouvoirs_utilises || {};

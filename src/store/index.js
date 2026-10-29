@@ -20,6 +20,7 @@ function creerGestionnaire(store, cle) {
       // on regèle les bases après lecture
       (function geler(o) { if (o && typeof o === "object") { Object.freeze(o); for (const k of Object.keys(o)) geler(o[k]); } })(partie.personnages[id].base);
     }
+    require("../engine/monnaie").harmoniser(partie); // anciennes pièces d'objets -> vraie monnaie (idempotent)
     return { partie, rev: e.rev };
   }
   return {

@@ -7,7 +7,11 @@ const D = require("./des");
 const P = require("./partie");
 
 const SORTS = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "sorts.json"), "utf8"));
+const M = require("./monnaie");
 const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+// Clé de comparaison d'un nom d'objet: sans articles ni "de", au singulier ("Potions de soin" = "Potion de soin").
+const MOTS_VIDES = new Set(["le", "la", "les", "un", "une", "des", "l", "de", "du", "d"]);
+const cleObjet = (s) => norm(s).replace(/['’]/g, " ").split(/\s+/).filter((w) => w && !MOTS_VIDES.has(w)).map((w) => (w.length > 3 ? w.replace(/[sx]$/, "") : w)).join(" ");
 const MAX_ANNULABLES = 20;
 
 class ErreurAction extends Error {}
@@ -154,12 +158,14 @@ const ACTIONS = {
     },
     executer(partie, p) {
       const c = perso(partie, p.cible);
+      if (M.estMonnaie(p.nom)) refuse("l'argent n'est pas un objet: utilise modifier_monnaie (po, pa, pc)");
       if (!C.CATEGORIES.includes(p.categorie)) refuse("catégorie inconnue: " + p.categorie);
       const q = p.quantite == null ? 1 : p.quantite;
       if (!Number.isInteger(q) || q < 1) refuse("quantité invalide");
       if (typeof p.poids_kg !== "number" || p.poids_kg < 0) refuse("poids invalide");
       const objets = c.etat.inventaire.objets;
-      const existant = objets.find((o) => norm(o.nom) === norm(p.nom) && o.categorie === p.categorie && o.poids_kg === p.poids_kg && !o.equipe);
+      // même objet = même nom à l'accord près (potion / potions), même catégorie: on empile, pas de doublon
+      const existant = objets.find((o) => cleObjet(o.nom) === cleObjet(p.nom) && o.categorie === p.categorie && !o.equipe);
       const futur = R.charge(c).poids + p.poids_kg * q;
       if (futur > R.charge(c).seuils.max) refuse("trop lourd: le personnage ne peut pas porter autant");
       let o;
@@ -169,6 +175,28 @@ const ACTIONS = {
         objets.push(o);
       }
       return { objet: o.id, quantite: o.quantite, charge: R.charge(c) };
+    }
+  },
+
+  modifier_monnaie: {
+    description: "Ajoute ou retire de l'argent à un personnage (valeurs négatives pour dépenser). 1 po = 10 pa = 100 pc. Les pièces ne sont JAMAIS des objets. Le total est converti automatiquement (23 pc deviennent 2 pa 3 pc).",
+    params: {
+      cible: { type: "string", description: "id du personnage", requis: true },
+      po: { type: "integer", description: "pièces d'or à ajouter (négatif pour retirer)" },
+      pa: { type: "integer", description: "pièces d'argent à ajouter (négatif pour retirer)" },
+      pc: { type: "integer", description: "pièces de cuivre à ajouter (négatif pour retirer)" },
+      raison: { type: "string", description: "d'où vient l'argent ou à quoi il sert" }
+    },
+    executer(partie, p) {
+      const c = perso(partie, p.cible);
+      for (const k of ["po", "pa", "pc"]) if (p[k] != null && !Number.isInteger(p[k])) refuse("montant invalide: " + k);
+      const delta = (p.po || 0) * M.COURS.po + (p.pa || 0) * M.COURS.pa + (p.pc || 0) * M.COURS.pc;
+      if (!delta) refuse("aucun montant");
+      const inv = c.etat.inventaire;
+      const total = M.totalCuivre(inv) + delta;
+      if (total < 0) refuse("pas assez d'argent: " + M.texte(inv));
+      M.poser(inv, total);
+      return { monnaie: M.texte(inv), po: inv.po, pa: inv.pa, pc: inv.pc };
     }
   },
 
