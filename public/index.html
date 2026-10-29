@@ -133,7 +133,15 @@ $("importer").onclick = () => agir(async () => {
 }, "err-ajout");
 $("dire").onclick = () => {
   const t = $("texte").value.trim(); if (!t) return;
-  agir(async () => { $("texte").value = ""; const r = await api("/api/dire", { perso: $("qui").value, texte: t }); afficher(r.partie); });
+  const nom = $("qui").selectedOptions[0] ? $("qui").selectedOptions[0].textContent : "";
+  agir(async () => {
+    $("texte").value = "";
+    // ta phrase s'affiche tout de suite, avant la réponse du MJ
+    afficher({ ...partie, texte: [...partie.texte, { qui: "joueur", texte: "[" + nom + "] " + t }] });
+    $("dire").disabled = true; $("texte").disabled = true;
+    try { const r = await api("/api/dire", { perso: $("qui").value, texte: t }); afficher(r.partie); }
+    catch (e) { $("texte").value = t; throw e; }
+  });
 };
 $("texte").addEventListener("keydown", (e) => { if (e.key === "Enter") $("dire").click(); });
 $("annuler").onclick = () => agir(async () => { const r = await api("/api/annuler", {}); afficher(r.partie); });
