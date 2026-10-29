@@ -100,6 +100,7 @@ function afficher(p) {
   etat.partie = p;
   $("connexion").hidden = true; $("app").hidden = false;
   appliquerMise();
+  if (!lireLocal("perso", "") && Object.keys(p.personnages).length > 1 && !etat.reglagesOuverts && !etat.choixDemande) { etat.choixDemande = true; ouvrirReglages(true); }
   rendreTexte(); rendreCarte(); rendreFiche(); rendreInventaire(); rendreQuetes();
   if (etat.reglagesOuverts) rendreReglages();
   majControles();
@@ -116,6 +117,11 @@ function majControles() {
   $("reprise").hidden = !(dernier && dernier.qui === "joueur" && !jet && !occ && !etat.jetEnCours);
   document.querySelectorAll("#zone-jet button").forEach((b) => { b.disabled = occ; });
   const c = persoActif();
+  const att = $("attente");
+  if (!occ) {
+    const mo = p && p.mj_occupe;
+    att.hidden = !mo; if (mo) att.textContent = "Le MJ répond à " + (mo.nom || "un joueur") + "...";
+  }
   $("qui-joue").textContent = c ? "Tu joues : " + c.base.nom : "Aucun personnage : ouvre les réglages pour en ajouter un.";
 }
 
@@ -151,20 +157,19 @@ function rendreJet() {
   const en = etat.jetEnCours;
   if (en) { return; } // la carte du jet en cours est gérée par lancerJet
   const jet = p.jets_en_attente[0];
-  const nouvelle = jet ? "jet:" + jet.id : "";
+  const monJet = !!jet && !!persoActif() && persoActif().id === jet.cible;
+  const nouvelle = jet ? "jet:" + jet.id + ":" + (monJet ? "moi" : "autre") : "";
   if (nouvelle === cleJet) { return; }
   cleJet = nouvelle;
   if (!jet) { zone.innerHTML = ""; return; }
   const c = p.personnages[jet.cible];
-  const ex = expressionDe(jet.de);
   zone.innerHTML = '<div class="carte-jet"><h2>Jet demandé à ' + echapper(c ? c.base.nom : jet.cible) + "</h2>" +
     "<div><b>" + echapper(jet.nom) + "</b>" + (jet.dd != null ? " (difficulté " + jet.dd + ")" : "") + (jet.avantage !== "normal" ? " : " + echapper(jet.avantage) : "") + "</div>" +
     '<div class="doux">' + echapper(jet.raison) + "</div>" +
     '<button type="button" class="arene" id="arene" aria-label="Lancer le dé"><svg viewBox="0 0 480 250" aria-hidden="true" id="svg-de"></svg></button>' +
-    '<div id="jet-bas"><button type="button" class="btn" id="lancer">Lancer ' + echapper(jet.de) + "</button></div></div>";
+    '<div id="jet-bas">' + (monJet ? '<button type="button" class="btn" id="lancer">Lancer ' + echapper(jet.de) + "</button>" : '<div class="doux">En attente du lancer de ' + echapper(c ? c.base.nom : jet.cible) + ".</div>") + "</div></div>";
   poserRepos(jet);
-  const go = () => lancerJet(jet);
-  $("lancer").onclick = go; $("arene").onclick = go;
+  if (monJet) { const go = () => lancerJet(jet); $("lancer").onclick = go; $("arene").onclick = go; }
   majControles();
 }
 function poserRepos(jet) {
@@ -257,10 +262,10 @@ function rendreCarte() {
     let [prof, larg] = j.empreinte || [1, 1];
     if (j.orientation === "profil") [prof, larg] = [larg, prof];
     const c = p.personnages[id];
-    let fond = "var(--warn)";
-    if (c) fond = actif && id === actif.id ? "var(--accent)" : "var(--info)";
+    let fond = "var(--ennemi)";
+    if (c) fond = actif && id === actif.id ? "var(--moi)" : "var(--info)";
     else if (j.camp === "allie") fond = "var(--pos)";
-    const encre = c && actif && id === actif.id ? "var(--accent-ink)" : "var(--token-ink)";
+    const encre = "var(--token-ink)";
     const rond = prof === 1 && larg === 1;
     const nom = c ? c.base.nom : (j.nom || id);
     return '<div class="jeton" title="' + echapper(nom) + '" style="left:' + pct(j.x, L) + ";top:" + pct(j.y, H) + ";width:" + pct(larg, L) + ";height:" + pct(prof, H) + ";background:" + fond + ";color:" + encre + ";border-radius:" + (rond ? "999px" : "6px") + '">' + echapper(nom.slice(0, 4)) + "</div>";
@@ -270,10 +275,10 @@ function rendreCarte() {
   const ligne = (pastille, txt) => '<div class="l">' + pastille + "<span>" + txt + "</span></div>";
   const legende = etat.legende ? '<div class="legende">' +
     '<div class="groupe">La couleur dit qui c\'est</div><div class="lignes">' +
-    ligne(pas("var(--accent)", "border-radius:999px"), "<strong>Couleur d'accent</strong> : ton personnage.") +
+    ligne(pas("var(--moi)", "border-radius:999px"), "<strong>Orange</strong> : ton personnage.") +
     ligne(pas("var(--info)", "border-radius:999px"), "<strong>Bleu</strong> : un autre joueur de la table.") +
     ligne(pas("var(--pos)", "border-radius:999px"), "<strong>Vert</strong> : un allié ou un personnage non joueur amical.") +
-    ligne(pas("var(--warn)", "border-radius:999px"), "<strong>Orange</strong> : un ennemi.") + "</div>" +
+    ligne(pas("var(--ennemi)", "border-radius:999px"), "<strong>Rouge</strong> : un ennemi.") + "</div>" +
     '<div class="groupe">La forme dit la taille</div><div class="lignes">' +
     ligne(pas("var(--muted)", "border-radius:999px"), "<strong>Rond</strong> : taille normale, une case.") +
     '<div class="l"><span class="pastille" aria-hidden="true" style="width:52px;background:var(--muted);border-radius:6px"></span><span><strong>Rectangle</strong> : grande créature sur 1 x 2 cases.</span></div></div>' +
@@ -454,12 +459,11 @@ function rendreReglages() {
     const c = p.personnages[id];
     return '<button type="button" class="' + (persoActif() && persoActif().id === id ? "on" : "") + '" data-a="choisir-perso" data-v="' + echapper(id) + '"><b>' + echapper(c.base.nom) + "</b><span>" + echapper(c.base.race + " " + c.base.classe + ", niveau " + c.base.niveau) + "</span></button>";
   }).join("") + "</div>" : '<div class="doux">Aucun personnage à la table.</div>';
-  const ajout = etat.ajout ? '<textarea id="json" placeholder=\'{"id":"...","base":{...},"etat":{...}}\'></textarea><div style="display:flex;gap:8px"><button type="button" class="btn sec" data-a="essai">Personnage d\'essai</button><button type="button" class="btn" data-a="importer">Ajouter</button></div><div class="doux">Colle ici le contenu produit par la page de création.</div>' :
-    '<button type="button" class="btn sec" data-a="ouvrir-ajout">Ajouter un personnage</button>';
+  const ajout = '<a class="btn" href="/creation.html" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Créer un personnage</a><button type="button" class="btn sec" data-a="essai">Ajouter le personnage d\'essai</button>';
   $("c-reglages").innerHTML =
     '<div class="boite"><h2>Personnage</h2>' + persos + ajout + "</div>" +
     '<div class="boite"><h2>Thème</h2>' + choix(THEMES, etat.theme, "theme") + "</div>" +
-    '<div class="boite"><h2>Disposition</h2>' + choix(DISPOSITIONS, etat.disposition, "disposition") + '<div class="doux">Les dispositions fixes évitent de déplacer les fenêtres à la main.</div></div>' +
+    (window.innerWidth >= 700 ? '<div class="boite"><h2>Disposition</h2>' + choix(DISPOSITIONS, etat.disposition, "disposition") + '<div class="doux">Pour grand écran. Sur téléphone, les onglets suffisent.</div></div>' : "") +
     '<div class="boite"><h2>Connexion</h2>' + (etat.serveur.mot_de_passe ? '<input id="mdp2" type="password" placeholder="Mot de passe de la table" autocomplete="current-password"><button type="button" class="btn" data-a="connecter">Se connecter</button>' : '<div class="doux">Cette table n\'a pas de mot de passe.</div>') + '<div class="doux">Tu es connecté tant que cette page charge la partie.</div></div>' +
     '<div class="boite"><h2>Sauvegarde</h2><div class="doux">Télécharge toute la partie dans un fichier, ou recharge un fichier. Charger une sauvegarde remplace la partie en cours.</div>' +
     '<button type="button" class="btn sec" data-a="telecharger">Télécharger la sauvegarde</button>' +
@@ -505,12 +509,9 @@ document.addEventListener("click", async (ev) => {
     else if (a === "choisir-perso") { etat.perso = v; ecrireLocal("perso", v); relance(); }
     else if (a === "theme") { etat.theme = v; ecrireLocal("theme", v); relance(); }
     else if (a === "disposition") { etat.disposition = v; ecrireLocal("disposition", v); relance(); }
-    else if (a === "ouvrir-ajout") { etat.ajout = true; rendreReglages(); }
-    else if (a === "essai") { $("json").value = JSON.stringify(ESSAI, null, 1); }
-    else if (a === "importer") {
-      let o; try { o = JSON.parse($("json").value); } catch (e) { throw new Error("Le texte collé n'est pas valide."); }
-      await api("/api/personnages", o);
-      etat.ajout = false; etat.perso = o.id; ecrireLocal("perso", o.id);
+    else if (a === "essai") {
+      await api("/api/personnages", ESSAI);
+      etat.perso = ESSAI.id; ecrireLocal("perso", ESSAI.id);
       etat.partie = await api("/api/partie"); relance();
     }
     else if (a === "connecter") {
@@ -541,6 +542,20 @@ $("entrer").onclick = async () => {
   catch (e) { $("err-connexion").textContent = e.message; }
 };
 $("mdp").addEventListener("keydown", (e) => { if (e.key === "Enter") $("entrer").click(); });
+// Sondage léger: les autres joueurs voient les nouveautés sans recharger.
+async function sonder() {
+  if (!etat.partie || etat.occupe || document.hidden || etat.jetEnCours) return;
+  try {
+    const occ = etat.partie.mj_occupe ? etat.partie.mj_occupe.perso || "" : "";
+    const r = await fetch("/api/partie?depuis=" + etat.partie.rev + "&occ=" + encodeURIComponent(occ));
+    if (!r.ok || etat.occupe || etat.jetEnCours) return;
+    const j = await r.json();
+    if (j.inchange) return;
+    afficher(j);
+  } catch (e) { /* réseau coupé: on réessaiera */ }
+}
+setInterval(sonder, 4000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) sonder(); });
 window.addEventListener("resize", () => { if (etat.partie) appliquerMise(); });
 
 async function demarrer() {

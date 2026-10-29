@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Création de personnage</title>
+<script src="/support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Spectral:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="{{ rootStyle }}">
+
+<div style="min-height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; background: var(--bar, #2B2118); color: var(--bar-ink, #F4ECD8)">
+<span style="font-family: var(--font-title, Spectral, Georgia, serif); font-size: 20px; font-weight: 700">Création de personnage</span>
+<button type="button" onClick="{{ cycleTheme }}" aria-label="Changer de thème" style="min-height: 40px; padding: 0 12px; font-size: 12px; border-radius: 999px; border: 1px solid var(--bar-line, #6B5A47); background: transparent; color: var(--bar-ink, #F4ECD8)">{{ themeLabel }}</button>
+</div>
+<div style="height: 5px; flex-shrink: 0; background: var(--stripe, transparent)"></div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line, #C9B88F); background: var(--bg, #F4ECD8)">
+<button type="button" onClick="{{ randomize }}" style="{{ randomStyle }}">Tout au hasard</button>
+<sc-for list="{{ stepChips }}" as="c" hint-placeholder-count="6">
+<button type="button" onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button>
+</sc-for>
+</div>
+
+<div style="flex: 1; min-height: 0; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+
+<sc-if value="{{ isRace }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">RACE</span>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px">
+<sc-for list="{{ races }}" as="r" hint-placeholder-count="6">
+<button type="button" onClick="{{ r.pick }}" style="{{ r.style }}">
+<span style="font-family: var(--font-title, Spectral, Georgia, serif); font-size: 17px; font-weight: 700">{{ r.name }}</span>
+<span style="font-size: 12px; color: var(--muted, #6B5A47)">{{ r.tag }}</span>
+</button>
+</sc-for>
+</div>
+
+<div style="background: var(--bg, #F4ECD8); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius, 12px); padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: var(--font-title, Spectral, Georgia, serif); font-size: 22px">{{ race.name }}</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="{{ neutralChip }}">Taille : {{ race.size }}</span>
+<span style="{{ neutralChip }}">Vitesse : {{ race.speed }}</span>
+<sc-for list="{{ raceBonusChips }}" as="b" hint-placeholder-count="3">
+<span style="{{ b.style }}">{{ b.text }}</span>
+</sc-for>
+</div>
+<span style="font-size: 14px; line-height: 1.5">{{ race.powers }}</span>
+
+<sc-if value="{{ hasSubs }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line2, #E4D8B8)">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">{{ subTitle }}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ subs }}" as="s" hint-placeholder-count="3">
+<button type="button" onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.name }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ subHasChoice }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; color: var(--muted, #6B5A47); line-height: 1.4">Règle : une sous-race donne soit un bonus de stat, soit des sorts, jamais les deux.</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" onClick="{{ modeStat }}" style="{{ modeStatStyle }}">{{ modeStatLabel }}</button>
+<button type="button" onClick="{{ modeSort }}" style="{{ modeSortStyle }}">Sorts de lignée</button>
+</div>
+</div>
+</sc-if>
+<span style="font-size: 14px; line-height: 1.5">{{ subSummary }}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDemiElfe }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line2, #E4D8B8)">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">{{ pickTitle }}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ pickChips }}" as="p" hint-placeholder-count="5">
+<button type="button" onClick="{{ p.pick }}" style="{{ p.style }}">{{ p.name }}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isClasse }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">CLASSE</span>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px">
+<sc-for list="{{ classes }}" as="k" hint-placeholder-count="6">
+<button type="button" onClick="{{ k.pick }}" style="{{ k.style }}">
+<span style="font-family: var(--font-title, Spectral, Georgia, serif); font-size: 17px; font-weight: 700">{{ k.name }}</span>
+<span style="font-size: 12px; color: var(--muted, #6B5A47)">{{ k.role }}</span>
+</button>
+</sc-for>
+</div>
+<div style="background: var(--bg, #F4ECD8); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius, 12px); padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: var(--font-title, Spectral, Georgia, serif); font-size: 22px">{{ klass.name }}</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="{{ neutralChip }}">Dé de vie : {{ klass.hdLabel }}</span>
+<span style="{{ neutralChip }}">Stats clés : {{ klass.keys }}</span>
+<span style="{{ neutralChip }}">Magie : {{ klass.magicLabel }}</span>
+<sc-if value="{{ klass.hasLot }}" hint-placeholder-val="{{ false }}"><span style="{{ posChip }}">+1 Loterie</span></sc-if>
+</div>
+<span style="font-size: 14px; line-height: 1.5">{{ klass.text }}</span>
+<sc-if value="{{ isCaster }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="{{ infoChip }}">Tours de magie : {{ klass.cantrips }}</span>
+<span style="{{ infoChip }}">{{ klass.prepLabel }}</span>
+<span style="{{ infoChip }}">Emplacements niv. 1 : {{ klass.slots }}</span>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStats }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">RÉPARTITION DES POINTS</span>
+<span style="{{ pointsStyle }}">{{ pointsLabel }}</span>
+</div>
+<span style="font-size: 13px; color: var(--muted, #6B5A47); line-height: 1.4">Chaque stat part de 8 et monte jusqu'à 15 (avant bonus). Au-delà de 13, un point coûte plus cher. Le chiffre en grand est le modificateur : c'est lui qui compte aux dés. La Loterie est fixée à 10.</span>
+<sc-for list="{{ statRows }}" as="s" hint-placeholder-count="8">
+<div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--panel, #FBF6E9); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius-m, 10px)">
+<span style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 6px; background: var(--ink, #2B2118); color: var(--bg, #F4ECD8); font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center">{{ s.ab }}</span>
+<span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 600">{{ s.label }}</span>
+<sc-if value="{{ s.adjustable }}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{ s.minus }}" aria-label="Retirer un point" style="{{ s.minusStyle }}">-</button>
+<span style="min-width: 24px; text-align: center; font-size: 16px; font-weight: 600">{{ s.base }}</span>
+<button type="button" onClick="{{ s.plus }}" aria-label="Ajouter un point" style="{{ s.plusStyle }}">+</button>
+</sc-if>
+<sc-if value="{{ s.fixed }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 12px; color: var(--muted, #6B5A47)">fixe</span>
+<span style="min-width: 24px; text-align: center; font-size: 16px; font-weight: 600">{{ s.base }}</span>
+</sc-if>
+<span style="{{ s.bonusStyle }}">{{ s.bonusText }}</span>
+<span style="min-width: 30px; text-align: center; font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 999px; background: var(--line2, #E4D8B8)">{{ s.total }}</span>
+<span style="min-width: 40px; text-align: right; font-family: var(--font-title, Spectral, Georgia, serif); font-size: 26px; font-weight: 700">{{ s.mod }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHisto }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">HISTORIQUE (LE PASSÉ DE TON PERSONNAGE)</span>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px">
+<sc-for list="{{ histos }}" as="h" hint-placeholder-count="6">
+<button type="button" onClick="{{ h.pick }}" style="{{ h.style }}">
+<span style="font-family: var(--font-title, Spectral, Georgia, serif); font-size: 17px; font-weight: 700">{{ h.name }}</span>
+<span style="font-size: 12px; color: var(--muted, #6B5A47)">{{ h.note }}</span>
+</button>
+</sc-for>
+</div>
+<div style="background: var(--bg, #F4ECD8); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius, 12px); padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: var(--font-title, Spectral, Georgia, serif); font-size: 22px">{{ histo.name }}</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{ histoChips }}" as="c" hint-placeholder-count="4">
+<span style="{{ c.style }}">{{ c.text }}</span>
+</sc-for>
+</div>
+<span style="font-size: 14px; line-height: 1.5">{{ histo.gear }}</span>
+<span style="font-size: 13px; color: var(--muted, #6B5A47); line-height: 1.4">À l'étape suivante, si une compétence de ta classe est déjà donnée par l'historique, tu en choisis une autre librement. L'historique ne donne aucune stat : c'est le rôle de la race.</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSkills }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="background: var(--bg, #F4ECD8); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius, 12px); padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">{{ skillTitle }}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ skillClassChips }}" as="c" hint-placeholder-count="6">
+<button type="button" onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.name }}</button>
+</sc-for>
+</div>
+</div>
+<div style="background: var(--info-soft, #DCE8F3); color: var(--ink, #2B2118); border-radius: var(--radius, 12px); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-height: 64px">
+<sc-if value="{{ hasInfo }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 14px; font-weight: 700">{{ infoTitle }}</span>
+<span style="font-size: 14px; line-height: 1.5">{{ infoText }}</span>
+</sc-if>
+<sc-if value="{{ noInfo }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 14px; line-height: 1.5; color: var(--muted, #6B5A47)">Touche une compétence pour voir à quoi elle sert et quelle stat elle utilise.</span>
+</sc-if>
+</div>
+<sc-if value="{{ hasRepl }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ replRows }}" as="r" hint-placeholder-count="1">
+<div style="background: var(--bg, #F4ECD8); border: 1px solid var(--warn, #B26A12); border-radius: var(--radius, 12px); padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 14px; font-weight: 600">{{ r.title }}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ r.chips }}" as="c" hint-placeholder-count="6">
+<button type="button" onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.name }}</button>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</sc-if>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">TES COMPÉTENCES MAÎTRISÉES (HISTORIQUE INCLUS)</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{ finalSkillChips }}" as="c" hint-placeholder-count="4">
+<span style="{{ c.style }}">{{ c.text }}</span>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSorts }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 13px; color: var(--muted, #6B5A47); line-height: 1.4">{{ spellIntro }}</span>
+<sc-for list="{{ spellGroups }}" as="g" hint-placeholder-count="2">
+<div style="background: var(--bg, #F4ECD8); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius, 12px); padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
+<h2 style="margin: 0; font-family: var(--font-title, Spectral, Georgia, serif); font-size: 20px">{{ g.title }}</h2>
+<span style="{{ g.countStyle }}">{{ g.count }}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px">
+<sc-for list="{{ g.spells }}" as="s" hint-placeholder-count="6">
+<button type="button" onClick="{{ s.toggle }}" style="{{ s.style }}">
+<span style="font-size: 14px; font-weight: 600">{{ s.name }}</span>
+<span style="font-size: 12px; color: var(--muted, #6B5A47)">{{ s.meta }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRecap }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<sc-if value="{{ frozen }}" hint-placeholder-val="{{ false }}">
+<div style="background: var(--pos-soft, #DDEBDD); color: var(--pos, #2F6B3A); border-radius: var(--radius, 12px); padding: 12px 14px; font-size: 14px; font-weight: 600; line-height: 1.5">{{ banner }}</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<button type="button" onClick="{{ join }}" style="{{ joinStyle }}">{{ joinLabel }}</button>
+<sc-if value="{{ hasJoinMsg }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 14px; color: {{ joinColor }}">{{ joinMsg }}</span>
+</sc-if>
+<sc-if value="{{ joinOk }}" hint-placeholder-val="{{ false }}">
+<a href="/" style="font-size: 15px; font-weight: 600; color: var(--accent, #8B2E2A)">Aller à la table</a>
+</sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ notFrozen }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">NOM DU PERSONNAGE</span>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<input type="text" value="{{ nameValue }}" onInput="{{ setName }}" placeholder="Ex : Drogan" style="flex: 1; min-width: 180px; min-height: 44px; padding: 0 12px; font-size: 16px; border-radius: var(--radius-m, 10px); border: 1px solid var(--line, #C9B88F); background: var(--panel, #FBF6E9); color: var(--ink, #2B2118)">
+<button type="button" onClick="{{ genName }}" style="min-height: 44px; padding: 0 16px; font-size: 14px; font-weight: 600; border-radius: var(--radius-m, 10px); border: 1px solid var(--accent, #8B2E2A); background: var(--panel, #FBF6E9); color: var(--ink, #2B2118)">Générer un nom</button>
+</div>
+<span style="font-size: 12px; color: var(--muted, #6B5A47)">{{ nameSource }}</span>
+</div>
+</sc-if>
+<div style="background: var(--bg, #F4ECD8); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius, 12px); padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-family: var(--font-title, Spectral, Georgia, serif); font-size: 24px">{{ recapName }}</h2>
+<span style="font-size: 14px; color: var(--muted, #6B5A47)">{{ recapLine }}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{ recapChips }}" as="c" hint-placeholder-count="4">
+<span style="{{ c.style }}">{{ c.text }}</span>
+</sc-for>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px">
+<sc-for list="{{ recapStats }}" as="s" hint-placeholder-count="8">
+<div style="display: flex; flex-direction: column; align-items: center; padding: 8px; background: var(--panel, #FBF6E9); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius-m, 10px)">
+<span style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 6px; background: var(--ink, #2B2118); color: var(--bg, #F4ECD8); font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center">{{ s.ab }}</span>
+<span style="font-size: 12px; font-weight: 600; color: var(--muted, #6B5A47)">{{ s.label }}</span>
+<span style="font-family: var(--font-title, Spectral, Georgia, serif); font-size: 26px; font-weight: 700">{{ s.mod }}</span>
+<span style="font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--line2, #E4D8B8)">{{ s.total }}</span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">FICHIER D'IMPORT FIGÉ (BLOC BASE)</span>
+<pre style="margin: 0; padding: 12px; font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; background: var(--panel, #FBF6E9); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius-m, 10px)">{{ json }}</pre>
+</div>
+<sc-if value="{{ frozen }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted, #6B5A47)">AJOUTÉ AU FICHIER DE PARTIE (ÉTAT DE DÉPART)</span>
+<pre style="margin: 0; padding: 12px; font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; background: var(--panel, #FBF6E9); border: 1px solid var(--line, #C9B88F); border-radius: var(--radius-m, 10px)">{{ partieJson }}</pre>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--line, #C9B88F); background: var(--bg, #F4ECD8)">
+<button type="button" onClick="{{ prev }}" style="{{ prevStyle }}">Précédent</button>
+<span style="flex: 1; text-align: center; font-size: 12px; color: var(--warn, #B26A12)">{{ warning }}</span>
+<button type="button" onClick="{{ next }}" style="{{ nextStyle }}">{{ nextLabel }}</button>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":980}}'>
+class Component extends DCLogic {
+  themes() {
+    return {
+      parchemin: { label: "Parchemin", v: {
+        "--bg": "#F4ECD8", "--panel": "#FBF6E9", "--line": "#C9B88F", "--line2": "#E4D8B8", "--ink": "#2B2118", "--muted": "#6B5A47",
+        "--accent": "#8B2E2A", "--accent-ink": "#F4ECD8", "--neg": "#A12B26", "--pos": "#2F6B3A", "--info": "#1F4E7A",
+        "--neg-soft": "#F6DDDB", "--pos-soft": "#DDEBDD", "--info-soft": "#DCE8F3", "--warn": "#B26A12", "--gold": "#B8862B",
+        "--page": "#E9DFC6", "--bar": "#2B2118", "--bar-ink": "#F4ECD8", "--bar-line": "#6B5A47", "--chip-ink": "#FBF6E9",
+        "--stripe": "transparent", "--radius": "12px", "--radius-m": "10px", "--radius-s": "8px",
+        "--font-title": "Spectral, Georgia, serif", "--font-body": "Inter, system-ui, sans-serif" } },
+      commonwealth: { label: "Commonwealth (Fallout 4)", v: {
+        "--bg": "#2B2925", "--panel": "#35322C", "--line": "#5A5445", "--line2": "#443F34", "--ink": "#E6DFC8", "--muted": "#B3AA8E",
+        "--accent": "#D9A441", "--accent-ink": "#1B1810", "--neg": "#EB7A62", "--pos": "#8DB36B", "--info": "#6FA8DC",
+        "--neg-soft": "#40231E", "--pos-soft": "#2B3320", "--info-soft": "#1F3040", "--warn": "#E08A2B", "--gold": "#D9A441",
+        "--page": "#1D1C19", "--bar": "#11100D", "--bar-ink": "#E6DFC8", "--bar-line": "#5A5445", "--chip-ink": "#15140F",
+        "--stripe": "repeating-linear-gradient(-45deg, #D9A441 0 10px, #15140F 10px 20px)",
+        "--radius": "3px", "--radius-m": "2px", "--radius-s": "2px",
+        "--font-title": "'Special Elite', 'Courier New', monospace", "--font-body": "Inter, system-ui, sans-serif" } }
+    };
+  }
+  themeStyle() {
+    const t = this.themes()[this.state.theme].v;
+    return Object.keys(t).map((k) => k + ": " + t[k] + ";").join(" ");
+  }
+  rnd(n) { return Math.floor(Math.random() * n); }
+  pickOne(a) { return a[this.rnd(a.length)]; }
+  shuffle(a) { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = this.rnd(i + 1); const t = b[i]; b[i] = b[j]; b[j] = t; } return b; }
+  makeName(raceId) {
+    const P = {
+      elfe: [["Ae", "Ari", "Cal", "Eli", "Fae", "Ili", "Lae", "Syl", "Tha", "Vae"], ["ra", "li", "ne", "th", "va", "e"], ["nor", "riel", "wen", "dir", "lith", "thas", "ion", "ael"]],
+      nain: [["Bor", "Dur", "Gim", "Thor", "Bru", "Kaz", "Ro", "Dain"], ["in", "ga", "dim", "rak", "grim"], ["din", "gar", "rik", "bek", "li"]],
+      orc: [["Gro", "Ug", "Mog", "Thrak", "Zug", "Dur", "Gar"], ["", "ma", "ka"], ["mash", "bag", "nak", "gul", "rok"]],
+      goliath: [["Kav", "Mal", "Tho", "Uth", "Aur", "Nal"], ["gu", "ri", "kar", "dra", "ven"], ["ga", "rim", "thok", "ak"]],
+      drakeide: [["Ar", "Bal", "Kri", "Raz", "Tor", "Sha"], ["", "a", "o"], ["jhan", "hax", "ghesh", "thar", "jin"]],
+      tieffelin: [["Mor", "Zar", "Ka", "Ame", "Nem", "Rie", "Dam"], ["", "ia", "ri"], ["thos", "ria", "mon", "ius", "akh"]],
+      petit: [["Pip", "Bil", "Fin", "Nim", "Wil", "Tob", "Mer"], ["", "ble", "bo"], ["kin", "wick", "ry", "dle", "by"]]
+    };
+    const map = { demielfe: "elfe", halfelin: "petit", gnome: "petit" };
+    if (raceId === "humain") return this.pickOne(["Aldric", "Béatrice", "Corin", "Damien", "Élise", "Gaspard", "Isaure", "Lucan", "Maëlle", "Orlan", "Thibaut", "Yvain", "Rowan", "Sélène"]);
+    const f = P[map[raceId] || raceId];
+    const w = this.pickOne(f[0]) + this.pickOne(f[1]) + this.pickOne(f[2]);
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }
+  randomState() {
+    const D = this.data();
+    const cost = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+    const race = this.pickOne(D.RACES);
+    const sub = race.subs.length ? this.pickOne(race.subs) : null;
+    const mode = sub && sub.spells && this.rnd(2) === 1 ? "sort" : "stat";
+    const picks = race.id === "demielfe" ? this.shuffle(D.STATS.filter((s) => s.k !== "lot" && s.k !== "cha").map((s) => s.k)).slice(0, 2) : [];
+    const klass = this.pickOne(D.CLASSES);
+    const caster = klass.mag !== null;
+    const histo = this.pickOne(D.HISTOS.filter((h) => !(h.casterOnly && !caster)));
+    const keys = ["sol", "per", "end", "cha", "int", "agi", "zen"];
+    let base = null;
+    for (let t = 0; t < 200 && !base; t++) {
+      const b = {}; keys.forEach((k) => { b[k] = 8; });
+      let left = 31;
+      for (let g = 0; g < 200; g++) {
+        const ok = keys.filter((k) => b[k] < 15 && cost[b[k] + 1] - cost[b[k]] <= left);
+        if (!ok.length) break;
+        const k = this.pickOne(ok); left -= cost[b[k] + 1] - cost[b[k]]; b[k] += 1;
+      }
+      if (left === 0) base = b;
+    }
+    const cs = this.shuffle(klass.skList).slice(0, klass.skN);
+    const repl = {};
+    const taken = histo.skills.concat(cs);
+    cs.filter((s) => histo.skills.indexOf(s) >= 0).forEach((s) => {
+      const free = D.SKILLS.filter((n) => taken.indexOf(n) < 0 && Object.keys(repl).map((k) => repl[k]).indexOf(n) < 0);
+      repl[s] = this.pickOne(free);
+    });
+    let cantrips = [], lvl1 = [], prepared = [];
+    if (caster) {
+      const sp = (lvl) => D.SPELLS.filter((s) => s.lvl === lvl && s.classes.indexOf(klass.code) >= 0).map((s) => s.name);
+      cantrips = this.shuffle(sp(0)).slice(0, klass.c);
+      lvl1 = this.shuffle(sp(1)).slice(0, klass.book ? klass.book : klass.p);
+      if (klass.book) prepared = this.shuffle(lvl1).slice(0, klass.p);
+    }
+    return { raceId: race.id, subId: sub ? sub.id : null, subMode: mode, picks, classId: klass.id, histoId: histo.id, base, cskills: cs, repl, cantrips, lvl1, prepared,
+      name: this.makeName(race.id), nameSource: "Tout a été tiré au hasard, nom compris (nom généré localement).", skillInfo: null, step: "recap" };
+  }
+  data() {
+    const STATS = [
+      { k: "sol", n: "Solidité", ab: "S", full: "Solidité" }, { k: "per", n: "Perception", ab: "P", full: "Perception" },
+      { k: "end", n: "Endurance", ab: "E", full: "Endurance" }, { k: "cha", n: "Charisme", ab: "C", full: "Charisme" },
+      { k: "int", n: "Intelligence", ab: "I", full: "Intelligence" }, { k: "agi", n: "Agilité", ab: "A", full: "Agilité" },
+      { k: "lot", n: "Loterie", ab: "L", full: "Loterie" }, { k: "zen", n: "Zen", ab: "Z", full: "Zen" }
+    ];
+    const RACES = [
+      { id: "humain", n: "Humain", tag: "Polyvalent", size: "Moyenne", speed: "9 m", b: { sol: 1, end: 1, cha: 1, int: 1, agi: 1, zen: 1 },
+        p: "Ingénieux, Talentueux, Polyvalent (don d'origine). Il gagne +1 sur six stats : aucun bonus de plus.", subs: [] },
+      { id: "elfe", n: "Elfe", tag: "Agile, sens aiguisés", size: "Moyenne", speed: "9 m", b: { agi: 2 },
+        p: "Vision dans le noir 18 m, avantage contre les charmes, sens aiguisés, transe.", subs: [
+          { id: "haut", n: "Haut-Elfe", stat: { int: 1 }, statText: "+1 Intelligence", spells: "Prestidigitation, Détection de la magie (niv. 3), Pas brumeux (niv. 5)" },
+          { id: "bois", n: "Elfe des bois", stat: { zen: 1 }, statText: "+1 Zen", spells: "Druidisme, Grande foulée (niv. 3), Passage sans trace (niv. 5)" },
+          { id: "drow", n: "Drow", stat: { cha: 1 }, statText: "+1 Charisme", spells: "Lumières dansantes, Lueurs féeriques (niv. 3), Ténèbres (niv. 5)" }
+        ] },
+      { id: "nain", n: "Nain", tag: "Robuste", size: "Moyenne", speed: "9 m", b: { end: 2 },
+        p: "Vision dans le noir 36 m, résistance au poison, +1 PV par niveau, connaissance de la pierre.", subs: [
+          { id: "collines", n: "Nain des collines", stat: { per: 1 }, statText: "+1 Perception", spells: "" },
+          { id: "montagnes", n: "Nain des montagnes", stat: { sol: 2 }, statText: "+2 Solidité", spells: "" }
+        ] },
+      { id: "halfelin", n: "Halfelin", tag: "Petit et chanceux", size: "Petite", speed: "8 m", b: { agi: 2 },
+        p: "Chance, Brave, Agilité halfeline, Naturellement furtif.", subs: [
+          { id: "pied", n: "Pied-léger", stat: { cha: 1 }, statText: "+1 Charisme", spells: "" },
+          { id: "robuste", n: "Robuste", stat: { end: 1 }, statText: "+1 Endurance", spells: "" }
+        ] },
+      { id: "gnome", n: "Gnome", tag: "Curieux et malin", size: "Petite", speed: "8 m", b: { int: 2 },
+        p: "Vision dans le noir 18 m, avantage aux sauvegardes d'Intelligence, Zen et Charisme.", subs: [
+          { id: "forets", n: "Gnome des forêts", stat: { agi: 1 }, statText: "+1 Agilité", spells: "Illusion mineure, Communication avec les animaux" },
+          { id: "roches", n: "Gnome des roches", stat: { end: 1 }, statText: "+1 Endurance", spells: "Réparation, Prestidigitation" }
+        ] },
+      { id: "drakeide", n: "Drakéide", tag: "Sang de dragon", size: "Moyenne", speed: "9 m", b: { sol: 2, cha: 1, end: 1 },
+        p: "Vision dans le noir 18 m, souffle, résistance de l'ancêtre draconique, vol (niv. 5). +1 Endurance d'équité.", subs: [] },
+      { id: "tieffelin", n: "Tieffelin", tag: "Héritage infernal", size: "Moyenne", speed: "9 m", b: { cha: 2, int: 1 },
+        p: "Vision dans le noir 18 m, résistance élémentaire, Présence d'un autre monde.", subs: [
+          { id: "abyssal", n: "Abyssal", stat: { end: 1 }, statText: "+1 Endurance", spells: "Résistance au poison. Pulvérisation de poison, puis Rayon empoisonné (niv. 3) et Immobilisation de personne (niv. 5)" },
+          { id: "chthonien", n: "Chthonien", stat: { zen: 1 }, statText: "+1 Zen", spells: "Résistance nécrotique. Contact glacial, puis Simulacre de vie (niv. 3) et Rayon affaiblissant (niv. 5)" },
+          { id: "infernal", n: "Infernal", stat: { int: 1 }, statText: "+1 Intelligence", spells: "Résistance au feu. Trait de feu, puis Représailles infernales (niv. 3) et Ténèbres (niv. 5)" }
+        ] },
+      { id: "orc", n: "Orc", tag: "Puissant", size: "Moyenne", speed: "9 m", b: { sol: 2, end: 1, per: 1, int: -2 },
+        p: "Vision dans le noir 36 m, Poussée d'adrénaline, Endurance implacable. +1 Perception d'équité.", subs: [] },
+      { id: "goliath", n: "Goliath", tag: "Géant des montagnes", size: "Grande", speed: "10,5 m", b: { sol: 2, end: 2, zen: -1, agi: -1 },
+        p: "Ascendance de géant (6 types), Constitution robuste, forme colossale (niv. 5). Occupe 1x2 cases sur la carte.", subs: [] },
+      { id: "demielfe", n: "Demi-elfe", tag: "Entre deux mondes", size: "Moyenne", speed: "9 m", b: { cha: 2, per: 1 },
+        p: "Vision dans le noir 18 m, avantage contre les charmes, 2 compétences au choix. +1 Perception d'équité.", subs: [] }
+    ];
+    const CLASSES = [
+      { id: "barbare", n: "Barbare", role: "Tank et gros dégâts", hd: 12, keys: "Solidité, Endurance", mag: null, lot: 0, text: "Il encaisse les coups et frappe fort. Pas de sorts." },
+      { id: "barde", n: "Barde", role: "Soutien, charisme", hd: 8, keys: "Charisme, Agilité", mag: "cha", lot: 1, c: 2, p: 4, s: 2, code: "Bar", text: "Il inspire, soigne un peu et lance des sorts grâce à son charisme." },
+      { id: "clerc", n: "Clerc", role: "Soigneur, foi", hd: 8, keys: "Zen, Endurance", mag: "zen", lot: 0, c: 3, p: 4, s: 2, code: "Clerc", text: "Il soigne et protège ses alliés grâce à sa foi." },
+      { id: "druide", n: "Druide", role: "Nature, métamorphose", hd: 8, keys: "Zen, Endurance", mag: "zen", lot: 0, c: 2, p: 4, s: 2, code: "Dru", text: "Il tire sa magie de la nature et peut prendre des formes animales." },
+      { id: "guerrier", n: "Guerrier", role: "Combattant polyvalent", hd: 10, keys: "Solidité ou Agilité, Perception", mag: null, lot: 0, text: "Le combattant le plus simple à jouer. Il utilise la Perception plutôt que le Zen. Pas de sorts." },
+      { id: "moine", n: "Moine", role: "Arts martiaux, vitesse", hd: 8, keys: "Agilité, Zen", mag: null, lot: 0, text: "Il se bat à mains nues. Son ki (niveau + modificateur de Zen, minimum 3) est un pouvoir à recharge, pas des sorts." },
+      { id: "paladin", n: "Paladin", role: "Tank sacré", hd: 10, keys: "Solidité, Charisme", mag: "cha", lot: 0, c: 0, p: 2, s: 2, code: "Pal", text: "Un chevalier sacré : frappes divines et soins. Pas de tours de magie." },
+      { id: "rodeur", n: "Rôdeur", role: "Pisteur, archer", hd: 10, keys: "Agilité, Perception", mag: "zen", lot: 1, c: 0, p: 2, s: 2, code: "Rôd", text: "Il piste et tire à distance. Sa magie vient du Zen, sa Perception sert à ses capacités non magiques." },
+      { id: "voleur", n: "Voleur", role: "Discrétion, précision", hd: 8, keys: "Agilité, Perception", mag: null, lot: 1, text: "Discret et précis, il utilise la Perception plutôt que le Zen. Pas de sorts." },
+      { id: "ensorceleur", n: "Ensorceleur", role: "Magie innée", hd: 6, keys: "Charisme, Endurance", mag: "cha", lot: 0, c: 4, p: 2, s: 2, code: "Ens", text: "Il est né avec la magie en lui : beaucoup de tours de magie, peu de sorts préparés." },
+      { id: "occultiste", n: "Occultiste", role: "Pacte avec une entité", hd: 8, keys: "Charisme, Endurance", mag: "cha", lot: 0, c: 2, p: 2, s: 1, code: "Occ", text: "Il tient sa magie d'un pacte. Ses emplacements se rechargent après un repos court.", pact: true },
+      { id: "magicien", n: "Magicien", role: "Livre de sorts, savoir", hd: 6, keys: "Intelligence, Perception", mag: "int", lot: 0, c: 3, p: 4, s: 2, code: "Mag", book: 6, text: "Il étudie la magie dans un grimoire : il connaît 6 sorts et en prépare 4 chaque jour." }
+    ];
+    const SKILLS = ["Acrobaties", "Dressage", "Arcanes", "Athlétisme", "Tromperie", "Histoire", "Intuition", "Intimidation", "Investigation", "Médecine", "Nature", "Perception", "Représentation", "Persuasion", "Religion", "Escamotage", "Discrétion", "Survie"];
+    const CSK = {
+      barbare: [2, ["Dressage", "Athlétisme", "Intimidation", "Nature", "Perception", "Survie"]],
+      barde: [3, SKILLS],
+      clerc: [2, ["Histoire", "Intuition", "Médecine", "Persuasion", "Religion"]],
+      druide: [2, ["Dressage", "Arcanes", "Intuition", "Médecine", "Nature", "Perception", "Religion", "Survie"]],
+      guerrier: [2, ["Acrobaties", "Dressage", "Athlétisme", "Histoire", "Intuition", "Intimidation", "Persuasion", "Perception", "Survie"]],
+      moine: [2, ["Acrobaties", "Athlétisme", "Histoire", "Intuition", "Religion", "Discrétion"]],
+      paladin: [2, ["Athlétisme", "Intuition", "Intimidation", "Médecine", "Persuasion", "Religion"]],
+      rodeur: [3, ["Dressage", "Athlétisme", "Intuition", "Investigation", "Nature", "Perception", "Discrétion", "Survie"]],
+      voleur: [4, ["Acrobaties", "Athlétisme", "Tromperie", "Intuition", "Intimidation", "Investigation", "Perception", "Persuasion", "Escamotage", "Discrétion"]],
+      ensorceleur: [2, ["Arcanes", "Tromperie", "Intuition", "Intimidation", "Persuasion", "Religion"]],
+      occultiste: [2, ["Arcanes", "Tromperie", "Histoire", "Intimidation", "Investigation", "Nature", "Religion"]],
+      magicien: [2, ["Arcanes", "Histoire", "Intuition", "Investigation", "Médecine", "Nature", "Religion"]]
+    };
+    CLASSES.forEach((k) => { k.skN = CSK[k.id][0]; k.skList = CSK[k.id][1]; });
+    const SKILLINFO = {
+      "Acrobaties": ["Agilité", "Garder l'équilibre, faire des roulades, marcher sur une corde, se dégager quand on est agrippé."],
+      "Dressage": ["Zen", "Calmer, guider ou monter un animal, et sentir s'il va attaquer."],
+      "Arcanes": ["Intelligence", "Savoir ce qu'on sait de la magie : sorts, objets magiques, créatures magiques, autres plans d'existence."],
+      "Athlétisme": ["Solidité", "Grimper, nager, sauter loin, pousser ou lutter : tout ce qui demande de la puissance physique."],
+      "Tromperie": ["Charisme", "Mentir de façon convaincante, bluffer, se déguiser ou cacher ses vraies intentions."],
+      "Histoire": ["Intelligence", "Se rappeler les événements, les royaumes, les guerres, les légendes et les personnages célèbres."],
+      "Intuition": ["Perception", "Deviner ce que pense vraiment quelqu'un : repérer un mensonge ou une mauvaise intention."],
+      "Intimidation": ["Charisme", "Obtenir quelque chose par la peur : menaces, regard noir, démonstration de force."],
+      "Investigation": ["Intelligence", "Chercher des indices, fouiller méthodiquement, déduire ce qui s'est passé, repérer un piège caché."],
+      "Médecine": ["Zen", "Stabiliser un blessé qui agonise, reconnaître une maladie ou la cause d'une mort."],
+      "Nature": ["Intelligence", "Connaître le terrain, les plantes, les animaux, la météo et les cycles naturels."],
+      "Perception": ["Perception", "Remarquer ce qui t'entoure : voir une embuscade, entendre un bruit, repérer une porte secrète."],
+      "Représentation": ["Charisme", "Chanter, jouer d'un instrument, danser, raconter une histoire devant un public."],
+      "Persuasion": ["Charisme", "Convaincre honnêtement : négocier, flatter, rallier quelqu'un à ta cause."],
+      "Religion": ["Intelligence", "Connaître les dieux, les rites, les symboles sacrés et les morts-vivants."],
+      "Escamotage": ["Agilité", "Vol à la tire, cacher un objet sur soi, tours de passe-passe."],
+      "Discrétion": ["Agilité", "Se déplacer sans bruit, se cacher, passer inaperçu."],
+      "Survie": ["Zen", "Pister, chasser, s'orienter, trouver un abri ou de quoi manger dans la nature."]
+    };
+    const HISTOS = [
+      { id: "artisan", n: "Artisan", skills: ["Investigation", "Persuasion"], don: "Artisan", gear: "Outils d'artisan, 32 po", note: "Investigation, Persuasion" },
+      { id: "artiste", n: "Artiste", skills: ["Acrobaties", "Représentation"], don: "Musicien", gear: "Un instrument, costumes, 11 po", note: "Acrobaties, Représentation" },
+      { id: "criminel", n: "Criminel", skills: ["Discrétion", "Escamotage"], don: "Vigilant", gear: "2 dagues, outils de voleur, pied-de-biche, 16 po", note: "Discrétion, Escamotage" },
+      { id: "ermite", n: "Ermite", skills: ["Médecine", "Religion"], don: "Guérisseur", gear: "Matériel d'herboriste, un livre, 16 po", note: "Médecine, Religion" },
+      { id: "fermier", n: "Fermier", skills: ["Dressage", "Nature"], don: "Robuste", gear: "Outils de menuisier, une pelle, 30 po", note: "Dressage, Nature" },
+      { id: "garde", n: "Garde", skills: ["Athlétisme", "Perception"], don: "Vigilant", gear: "Une lance, une arbalète légère, une lanterne, 12 po", note: "Athlétisme, Perception" },
+      { id: "marchand", n: "Marchand", skills: ["Dressage", "Persuasion"], don: "+1 Loterie (remplace le don)", gear: "Outils de navigateur, 22 po", note: "Dressage, Persuasion", lot: 1 },
+      { id: "noble", n: "Noble", skills: ["Histoire", "Persuasion"], don: "Doué : 3 compétences en plus", gear: "Habits fins, une bague à sceau, 29 po", note: "Histoire, Persuasion" },
+      { id: "sage", n: "Sage", skills: ["Arcanes", "Histoire"], don: "Initié à la magie", gear: "Encre, plumes, un livre, 8 po", note: "Réservé aux lanceurs de sorts", casterOnly: true },
+      { id: "soldat", n: "Soldat", skills: ["Athlétisme", "Intimidation"], don: "Sauvagerie", gear: "Une lance, un arc court, une trousse de soins, 14 po", note: "Athlétisme, Intimidation" }
+    ];
+    const SPELLS = [
+      ["Trait de feu", 0, "Évocation", "Ens,Mag", "36 m, 1d10 feu"],
+      ["Rayon de givre", 0, "Évocation", "Ens,Mag,Occ", "18 m, 1d8 froid, vitesse -3 m"],
+      ["Décharge occulte", 0, "Évocation", "Occ", "36 m, 1d10 force"],
+      ["Flamme sacrée", 0, "Évocation", "Clerc", "18 m, 1d8 radiant"],
+      ["Moquerie cruelle", 0, "Enchantement", "Bar", "18 m, 1d6 psychique"],
+      ["Flammes", 0, "Invocation", "Dru", "Flamme lançable, 1d8 feu"],
+      ["Main de mage", 0, "Invocation", "Bar,Ens,Occ,Mag", "9 m, main spectrale"],
+      ["Lumière", 0, "Évocation", "Bar,Clerc,Ens,Mag", "Contact, 1 h"],
+      ["Illusion mineure", 0, "Illusion", "Bar,Ens,Occ,Mag", "9 m, son ou image"],
+      ["Prestidigitation", 0, "Transmutation", "Bar,Ens,Occ,Mag", "3 m, petits tours"],
+      ["Assistance", 0, "Divination", "Clerc,Dru", "+1d4 à un test"],
+      ["Réparation", 0, "Transmutation", "Bar,Clerc,Dru,Ens,Mag", "Contact, 1 min"],
+      ["Contact glacial", 0, "Nécromancie", "Ens,Occ,Mag", "Contact, 1d10 nécrotique"],
+      ["Poigne électrique", 0, "Évocation", "Ens,Mag,Occ", "Contact, 1d8 foudre"],
+      ["Thaumaturgie", 0, "Transmutation", "Clerc", "9 m, petits prodiges"],
+      ["Druidisme", 0, "Transmutation", "Dru", "9 m, effets de nature"],
+      ["Gourdin magique", 0, "Transmutation", "Dru", "Action bonus, 1 min"],
+      ["Stabilisation", 0, "Nécromancie", "Clerc,Dru", "4,5 m, stabilise à 0 PV"],
+      ["Projectile magique", 1, "Évocation", "Ens,Mag", "36 m, 3 x (1d4+1) force"],
+      ["Bouclier", 1, "Abjuration", "Ens,Mag", "Réaction, +5 CA"],
+      ["Armure de mage", 1, "Abjuration", "Ens,Mag", "Contact, 8 h, CA 13 + Agi"],
+      ["Mains brûlantes", 1, "Évocation", "Ens,Mag", "Cône 4,5 m, 3d6 feu"],
+      ["Sommeil", 1, "Enchantement", "Bar,Ens,Mag", "18 m, concentration"],
+      ["Charme-personne", 1, "Enchantement", "Bar,Dru,Ens,Occ,Mag", "9 m, 1 h"],
+      ["Vague tonnante", 1, "Évocation", "Bar,Dru,Ens,Mag", "Cube 4,5 m, 2d8 tonnerre"],
+      ["Détection de la magie", 1, "Divination", "Bar,Clerc,Dru,Pal,Rôd,Ens,Occ,Mag", "Rituel, 10 min"],
+      ["Soins", 1, "Abjuration", "Bar,Clerc,Dru,Pal,Rôd", "Contact, 2d8 + mod."],
+      ["Mot de guérison", 1, "Abjuration", "Bar,Clerc,Dru", "18 m, 2d4 + mod."],
+      ["Bénédiction", 1, "Enchantement", "Clerc,Pal", "9 m, +1d4, concentration"],
+      ["Bouclier de la foi", 1, "Abjuration", "Clerc,Pal", "18 m, +2 CA"],
+      ["Châtiment divin", 1, "Évocation", "Pal", "+2d8 radiant"],
+      ["Marque du chasseur", 1, "Divination", "Rôd", "27 m, +1d6, 1 h"],
+      ["Baies nourrissantes", 1, "Invocation", "Dru,Rôd", "10 baies, 1 PV chacune"],
+      ["Maléfice", 1, "Enchantement", "Occ", "27 m, +1d6 nécrotique"],
+      ["Tentacules de Hadar", 1, "Invocation", "Occ", "Émanation 3 m, 2d6"],
+      ["Fléau", 1, "Enchantement", "Bar,Clerc,Occ", "9 m, -1d4"],
+      ["Sanctuaire", 1, "Abjuration", "Clerc", "9 m, 1 min"],
+      ["Injonction", 1, "Enchantement", "Bar,Clerc,Pal,Occ", "18 m, ordre d'un mot"],
+      ["Châtiment tonitruant", 1, "Évocation", "Pal", "+2d6 tonnerre, repousse"],
+      ["Faveur divine", 1, "Transmutation", "Pal", "+1d4 radiant, 1 min"],
+      ["Enchevêtrement", 1, "Invocation", "Dru,Rôd", "27 m, entrave"],
+      ["Nappe de brouillard", 1, "Invocation", "Dru,Rôd,Ens,Mag", "36 m, 1 h"],
+      ["Communication avec les animaux", 1, "Divination", "Bar,Dru,Rôd,Occ", "Rituel, 10 min"],
+      ["Grande foulée", 1, "Transmutation", "Bar,Dru,Rôd,Mag", "Contact, +3 m"],
+      ["Purification de la nourriture et de l'eau", 1, "Transmutation", "Clerc,Dru,Pal", "Rituel, 3 m"],
+      ["Armure d'Agathys", 1, "Abjuration", "Occ", "5 PV temporaires"],
+      ["Trait ensorcelé", 1, "Évocation", "Ens,Occ,Mag", "18 m, 2d12 foudre"],
+      ["Fou rire de Tasha", 1, "Enchantement", "Bar,Occ,Mag", "9 m, concentration"],
+      ["Identification", 1, "Divination", "Bar,Mag", "Rituel, objet magique"],
+      ["Disque flottant de Tenser", 1, "Invocation", "Mag", "9 m, 1 h, porte 250 kg"]
+    ].map((a) => ({ name: a[0], lvl: a[1], school: a[2], classes: a[3].split(","), meta: a[2] + " - " + a[4] }));
+    return { STATS, RACES, CLASSES, HISTOS, SPELLS, SKILLS, SKILLINFO };
+  }
+  constructor(props) {
+    super(props);
+    this.state = {
+      theme: "commonwealth", step: "race", name: "", nameSource: "",
+      raceId: "goliath", subId: null, subMode: "stat", picks: [],
+      classId: "guerrier",
+      base: { sol: 15, per: 12, end: 14, cha: 10, int: 10, agi: 12, zen: 11 },
+      histoId: "soldat", cskills: [], repl: {}, skillInfo: null, frozen: false, join: { etat: "", msg: "" },
+      cantrips: [], lvl1: [], prepared: []
+    };
+  }
+  renderVals() {
+    const st = this.state;
+    const D = this.data();
+    const cost = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+    const BUDGET = 31;
+    const race = D.RACES.filter((r) => r.id === st.raceId)[0];
+    const klass = D.CLASSES.filter((k) => k.id === st.classId)[0];
+    const histo = D.HISTOS.filter((h) => h.id === st.histoId)[0];
+    const sub = race.subs.filter((s) => s.id === st.subId)[0] || null;
+    const caster = klass.mag !== null;
+    const hasSpellsFromSub = !!(sub && sub.spells);
+    const mode = hasSpellsFromSub ? st.subMode : "stat";
+    const isDemiElfe = race.id === "demielfe";
+
+    const statName = {}; D.STATS.forEach((s) => { statName[s.k] = s.n; });
+    const modOf = (t) => Math.floor((t - 10) / 2);
+    const sign = (n) => (n > 0 ? "+" + n : "" + n);
+
+    const spent = D.STATS.reduce((a, s) => a + (s.k === "lot" ? 0 : cost[st.base[s.k]]), 0);
+    const left = BUDGET - spent;
+
+    const totals = {}; const bonuses = {};
+    D.STATS.forEach((s) => {
+      let b = (race.b[s.k] || 0);
+      if (sub && mode === "stat" && sub.stat[s.k]) b += sub.stat[s.k];
+      if (isDemiElfe && st.picks.indexOf(s.k) >= 0) b += 1;
+      if (s.k === "lot") { b += klass.lot; if (histo.lot) b += histo.lot; }
+      bonuses[s.k] = b;
+      totals[s.k] = (s.k === "lot" ? 10 : st.base[s.k]) + b;
+    });
+
+    const chipBase = "font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; ";
+    const neutralChip = chipBase + "background: var(--line2, #E4D8B8); color: var(--ink, #2B2118)";
+    const posChip = chipBase + "background: var(--pos-soft, #DDEBDD); color: var(--pos, #2F6B3A)";
+    const negChip = chipBase + "background: var(--neg-soft, #F6DDDB); color: var(--neg, #A12B26)";
+    const infoChip = chipBase + "background: var(--info-soft, #DCE8F3); color: var(--info, #1F4E7A)";
+    const tone = (n) => (n > 0 ? posChip : (n < 0 ? negChip : neutralChip));
+    const card = (sel, dis) => "display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px 12px; min-height: 56px; border-radius: var(--radius-m, 10px); color: var(--ink, #2B2118); border: 2px solid " + (sel ? "var(--accent, #8B2E2A)" : "var(--line, #C9B88F)") + "; background: " + (sel ? "var(--bg, #F4ECD8)" : "var(--panel, #FBF6E9)") + "; opacity: " + (dis ? 0.45 : 1);
+    const pill = (sel) => "min-height: 40px; padding: 0 14px; font-size: 14px; font-weight: 600; border-radius: 999px; border: 2px solid " + (sel ? "var(--accent, #8B2E2A)" : "var(--line, #C9B88F)") + "; background: " + (sel ? "var(--accent, #8B2E2A)" : "var(--panel, #FBF6E9)") + "; color: " + (sel ? "var(--accent-ink, #F4ECD8)" : "var(--ink, #2B2118)");
+
+    // Étapes
+    const stepDefs = [
+      { id: "race", label: "Race" }, { id: "classe", label: "Classe" }, { id: "stats", label: "Stats" },
+      { id: "histo", label: "Historique" }, { id: "skills", label: "Compétences" }, { id: "sorts", label: "Sorts" }, { id: "recap", label: "Récap" }
+    ].filter((s) => s.id !== "sorts" || caster).map((s, i) => ({ id: s.id, label: (i + 1) + " " + s.label }));
+    const idx = stepDefs.map((s) => s.id).indexOf(st.step);
+    const go = (id) => () => this.setState({ step: id });
+    const stepChips = stepDefs.map((s, i) => ({
+      label: s.label, go: st.frozen ? () => {} : go(s.id),
+      style: "min-height: 36px; padding: 0 12px; font-size: 13px; font-weight: 600; border-radius: 999px; border: 1px solid " + (s.id === st.step ? "var(--accent, #8B2E2A)" : "var(--line, #C9B88F)") + "; background: " + (s.id === st.step ? "var(--accent, #8B2E2A)" : (i < idx ? "var(--pos-soft, #DDEBDD)" : "var(--panel, #FBF6E9)")) + "; color: " + (s.id === st.step ? "var(--accent-ink, #F4ECD8)" : "var(--ink, #2B2118)")
+    }));
+
+    // Sorts
+    const need = caster ? { c: klass.c, p: klass.p, book: klass.book || 0 } : { c: 0, p: 0, book: 0 };
+    const spellsFor = (lvl) => D.SPELLS.filter((s) => s.lvl === lvl && s.classes.indexOf(klass.code) >= 0);
+    const cantripList = caster ? spellsFor(0) : [];
+    const lvl1List = caster ? spellsFor(1) : [];
+    const lvl1Need = klass.book ? klass.book : klass.p;
+    const toggleIn = (key, name, max) => () => {
+      const cur = st[key].slice(); const i = cur.indexOf(name);
+      if (i >= 0) cur.splice(i, 1); else if (cur.length < max) cur.push(name); else return;
+      const patch = {}; patch[key] = cur;
+      if (key === "lvl1" && klass.book) patch.prepared = st.prepared.filter((n) => cur.indexOf(n) >= 0);
+      this.setState(patch);
+    };
+    const spellGroups = [];
+    if (caster && need.c > 0) {
+      spellGroups.push({ title: "Tours de magie", count: st.cantrips.length + " / " + need.c,
+        countStyle: st.cantrips.length === need.c ? posChip : infoChip,
+        spells: cantripList.map((s) => ({ name: s.name, meta: s.meta, toggle: toggleIn("cantrips", s.name, need.c), style: card(st.cantrips.indexOf(s.name) >= 0, false) })) });
+    }
+    if (caster) {
+      spellGroups.push({ title: klass.book ? "Livre de sorts (niveau 1)" : "Sorts préparés (niveau 1)", count: st.lvl1.length + " / " + lvl1Need,
+        countStyle: st.lvl1.length === lvl1Need ? posChip : infoChip,
+        spells: lvl1List.map((s) => ({ name: s.name, meta: s.meta, toggle: toggleIn("lvl1", s.name, lvl1Need), style: card(st.lvl1.indexOf(s.name) >= 0, false) })) });
+      if (klass.book) {
+        spellGroups.push({ title: "Préparés pour la journée", count: st.prepared.length + " / " + klass.p,
+          countStyle: st.prepared.length === klass.p ? posChip : infoChip,
+          spells: st.lvl1.map((n) => { const sp = D.SPELLS.filter((x) => x.name === n)[0]; return { name: n, meta: sp.meta, toggle: toggleIn("prepared", n, klass.p), style: card(st.prepared.indexOf(n) >= 0, false) }; }) });
+      }
+    }
+    const spellsDone = !caster || ((need.c === 0 || st.cantrips.length === need.c) && st.lvl1.length === lvl1Need && (!klass.book || st.prepared.length === klass.p));
+
+    // Compétences
+    const hs = histo.skills;
+    const overlaps = st.cskills.filter((s) => hs.indexOf(s) >= 0);
+    const replEff = {}; overlaps.forEach((s) => { if (st.repl[s]) replEff[s] = st.repl[s]; });
+    const replVals = Object.keys(replEff).map((k) => replEff[k]);
+    const taken = hs.concat(st.cskills).concat(replVals);
+    const toggleSkill = (name) => () => {
+      const cur = st.cskills.slice(); const i = cur.indexOf(name);
+      if (i >= 0) cur.splice(i, 1); else if (cur.length < klass.skN) cur.push(name); else { this.setState({ skillInfo: name }); return; }
+      this.setState({ cskills: cur, skillInfo: name });
+    };
+    const SI = D.SKILLINFO;
+    const infoOf = st.skillInfo ? SI[st.skillInfo] : null;
+    const hasInfo = !!infoOf;
+    const infoTitle = infoOf ? st.skillInfo + " (" + infoOf[0] + ")" : "";
+    const infoText = infoOf ? infoOf[1] : "";
+    const skillChip = (name, sel) => ({ name, style: pill(sel), pick: toggleSkill(name) });
+    const skillClassChips = klass.skList.map((n) => skillChip(n, st.cskills.indexOf(n) >= 0));
+    const replRows = overlaps.map((s) => ({
+      title: s + " est déjà donnée par l'historique : choisis une autre compétence",
+      chips: D.SKILLS.filter((n) => taken.indexOf(n) < 0 || replEff[s] === n).map((n) => ({ name: n, style: pill(replEff[s] === n),
+        pick: () => { const r = Object.assign({}, st.repl); if (r[s] === n) delete r[s]; else r[s] = n; this.setState({ repl: r, skillInfo: n }); } }))
+    }));
+    const finalSkills = hs.concat(st.cskills.filter((s) => hs.indexOf(s) < 0)).concat(replVals);
+    const skillsDone = st.cskills.length === klass.skN && overlaps.every((s) => !!replEff[s]);
+    const finalSkillChips = finalSkills.map((s) => ({ text: s, style: neutralChip }));
+
+    // Alertes
+    let warning = "";
+    if (st.step === "recap" && !st.frozen && st.name.trim() === "") warning = "Donne un nom au personnage";
+    if (st.step === "skills" && !skillsDone) warning = st.cskills.length < klass.skN ? "Choisis " + klass.skN + " compétences de classe" : "Choisis les compétences de remplacement";
+    if (st.step === "race" && isDemiElfe && st.picks.length < 2) warning = "Choisis 2 stats pour le Demi-elfe";
+    if (st.step === "race" && race.subs.length > 0 && !sub) warning = "Choisis une sous-race";
+    if (st.step === "stats" && left !== 0) warning = left > 0 ? left + " point(s) à dépenser" : "Trop de points dépensés";
+    if (st.step === "sorts" && !spellsDone) warning = "Complète ta sélection de sorts";
+    const histoBlocked = histo.casterOnly && !caster;
+    if (st.step === "histo" && histoBlocked) warning = "Le Sage demande une classe qui lance des sorts";
+    const canNext = warning === "";
+    const last = idx === stepDefs.length - 1;
+
+    // Récap
+    const hp = klass.hd + modOf(totals.end);
+    const name = st.name.trim() === "" ? "Sans nom" : st.name.trim();
+    const baseOut = {}; D.STATS.forEach((s) => { baseOut[s.k] = s.k === "lot" ? 10 : st.base[s.k]; });
+    const out = {
+      nom: name, niveau: 1, race: race.n, sous_race: sub ? sub.n : null, option_sous_race: sub ? (mode === "stat" ? sub.statText : "sorts de lignée") : null,
+      classe: klass.n, historique: histo.n, don: histo.don, competences: finalSkills,
+      stats_base: baseOut, bonus: bonuses, stats_total: totals, pv_max: hp, vitesse: race.speed, taille: race.size
+    };
+    if (isDemiElfe) out.choix_demi_elfe = st.picks;
+    if (caster) out.sorts = { caracteristique: klass.mag, tours_de_magie: st.cantrips, connus: klass.book ? st.lvl1 : undefined, prepares: klass.book ? st.prepared : st.lvl1, emplacements_utilises: 0 };
+    const slug = name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "sans-nom";
+    const gearParts = histo.gear.split(", ");
+    const goldMatch = /^(\d+) po$/.exec(gearParts[gearParts.length - 1]);
+    const partie = {
+      fichier: "partie.json",
+      action_journal: { action: "creer_personnage", par: "systeme", cible: slug, annulable: true },
+      personnage_ajoute: {
+        id: slug, base: "personnages/" + slug + ".json (figé, lecture seule)",
+        etat: { pv: hp, pv_max: hp, effets: [], inventaire: { po: goldMatch ? Number(goldMatch[1]) : 0, objets: gearParts.filter((g, i) => !(goldMatch && i === gearParts.length - 1)) },
+          emplacements_utilises: caster ? 0 : undefined, position: null }
+      },
+      journal: [{ temps: "jour 1, début", texte: name + " rejoint l'aventure." }]
+    };
+    const frozen = st.frozen;
+    const recapChips = [
+      { text: "PV : " + hp, style: neutralChip }, { text: "Vitesse : " + race.speed, style: neutralChip }, { text: "Taille : " + race.size, style: neutralChip },
+      { text: "Don : " + histo.don, style: infoChip }
+    ];
+    if (caster) {
+      const mm = modOf(totals[klass.mag]);
+      recapChips.push({ text: "DD des sorts : " + (10 + mm), style: infoChip });
+      recapChips.push({ text: "Attaque magique : " + sign(2 + mm), style: infoChip });
+    }
+
+    return {
+      rootStyle: "width: 100%; min-height: 0; height: 100vh; height: 100dvh; box-sizing: border-box; background: var(--panel); font-family: var(--font-body); color: var(--ink); display: flex; flex-direction: column; overflow: hidden; " + this.themeStyle(),
+      themeLabel: this.themes()[st.theme].label,
+      cycleTheme: () => { const ks = Object.keys(this.themes()); this.setState({ theme: ks[(ks.indexOf(st.theme) + 1) % ks.length] }); },
+      stepChips,
+      isRace: st.step === "race", isClasse: st.step === "classe", isStats: st.step === "stats", isHisto: st.step === "histo", isSkills: st.step === "skills",
+      skillTitle: "COMPÉTENCES DE CLASSE (" + st.cskills.length + " / " + klass.skN + ")",
+      hasInfo, noInfo: !hasInfo, infoTitle, infoText,
+      skillClassChips, replRows, hasRepl: replRows.length > 0, finalSkillChips,
+      isSorts: st.step === "sorts", isRecap: st.step === "recap",
+      neutralChip, posChip, infoChip,
+      // Race
+      nameValue: st.name,
+      setName: (e) => this.setState({ name: e.target.value }),
+      races: D.RACES.map((r) => ({ name: r.n, tag: r.tag, style: card(r.id === st.raceId, false),
+        pick: () => this.setState({ raceId: r.id, subId: null, subMode: "stat", picks: [] }) })),
+      race: { name: race.n, size: race.size, speed: race.speed, powers: race.p },
+      raceBonusChips: Object.keys(race.b).map((k) => ({ text: sign(race.b[k]) + " " + statName[k], style: tone(race.b[k]) })),
+      hasSubs: race.subs.length > 0,
+      subTitle: race.id === "tieffelin" ? "HÉRITAGE" : "SOUS-RACE",
+      subs: race.subs.map((s) => ({ name: s.n, style: pill(s.id === st.subId), pick: () => this.setState({ subId: s.id, subMode: "stat" }) })),
+      subHasChoice: hasSpellsFromSub,
+      modeStat: () => this.setState({ subMode: "stat" }),
+      modeSort: () => this.setState({ subMode: "sort" }),
+      modeStatStyle: pill(mode === "stat"),
+      modeSortStyle: pill(mode === "sort"),
+      modeStatLabel: sub ? "Bonus de stat (" + sub.statText + ")" : "Bonus de stat",
+      subSummary: !sub ? "Choisis une sous-race pour voir son effet." : (mode === "stat" ? "Bonus retenu : " + sub.statText + "." : "Sorts retenus : " + sub.spells + "."),
+      isDemiElfe,
+      pickTitle: "CHOISIS 2 STATS À +1 (" + st.picks.length + " / 2)",
+      pickChips: D.STATS.filter((s) => s.k !== "lot" && s.k !== "cha").map((s) => ({ name: s.n, style: pill(st.picks.indexOf(s.k) >= 0),
+        pick: () => { const cur = st.picks.slice(); const i = cur.indexOf(s.k); if (i >= 0) cur.splice(i, 1); else if (cur.length < 2) cur.push(s.k); this.setState({ picks: cur }); } })),
+      // Classe
+      classes: D.CLASSES.map((k) => ({ name: k.n, role: k.role, style: card(k.id === st.classId, false),
+        pick: () => this.setState({ classId: k.id, cantrips: [], lvl1: [], prepared: [], cskills: [], repl: {}, histoId: (st.histoId === "sage" && k.mag === null) ? "soldat" : st.histoId }) })),
+      klass: { name: klass.n, hdLabel: "d" + klass.hd, keys: klass.keys, magicLabel: caster ? statName[klass.mag] : "Aucune", hasLot: klass.lot > 0, text: klass.text,
+        cantrips: klass.c, slots: klass.s + (klass.pact ? " (repos court)" : ""),
+        prepLabel: klass.book ? "Livre de " + klass.book + " sorts, " + klass.p + " préparés" : klass.p + " sorts préparés" },
+      isCaster: caster,
+      // Stats
+      pointsLabel: left + " / " + BUDGET + " points restants",
+      pointsStyle: left === 0 ? posChip : (left < 0 ? negChip : infoChip),
+      statRows: D.STATS.map((s) => {
+        const b = bonuses[s.k]; const isLot = s.k === "lot";
+        const cur = st.base[s.k];
+        const canMinus = !isLot && cur > 8; const canPlus = !isLot && cur < 15 && (cost[cur + 1] - cost[cur]) <= left;
+        const bt = (n) => "min-width: 36px; text-align: center; " + tone(n);
+        return {
+          label: s.full, ab: s.ab, adjustable: !isLot, fixed: isLot, base: isLot ? 10 : cur,
+          minus: () => { if (canMinus) { const nb = Object.assign({}, st.base); nb[s.k] = cur - 1; this.setState({ base: nb }); } },
+          plus: () => { if (canPlus) { const nb = Object.assign({}, st.base); nb[s.k] = cur + 1; this.setState({ base: nb }); } },
+          minusStyle: "width: 40px; height: 40px; font-size: 20px; border-radius: 50%; border: 1px solid var(--line, #C9B88F); background: var(--bg, #F4ECD8); color: var(--ink, #2B2118); opacity: " + (canMinus ? 1 : 0.35),
+          plusStyle: "width: 40px; height: 40px; font-size: 20px; border-radius: 50%; border: 1px solid var(--line, #C9B88F); background: var(--bg, #F4ECD8); color: var(--ink, #2B2118); opacity: " + (canPlus ? 1 : 0.35),
+          bonusText: b === 0 ? "0" : sign(b), bonusStyle: bt(b), total: totals[s.k], mod: sign(modOf(totals[s.k]))
+        };
+      }),
+      // Historique
+      histos: D.HISTOS.map((h) => { const blocked = h.casterOnly && !caster; return { name: h.n, note: h.note, style: card(h.id === st.histoId, blocked),
+        pick: () => { if (!blocked) this.setState({ histoId: h.id, repl: {} }); } }; }),
+      histo: { name: histo.n, gear: "Équipement : " + histo.gear },
+      histoChips: histo.skills.map((s) => ({ text: s, style: neutralChip })).concat([{ text: "Don : " + histo.don, style: infoChip }]),
+      // Sorts
+      spellIntro: caster ? (klass.book ? "Le Magicien note 6 sorts dans son livre, puis en prépare 4. Les sorts affichés sont ceux de la liste de sa classe." : "Tu choisis tes sorts parmi la liste de ta classe. Tu pourras les changer après un repos long.") : "",
+      spellGroups,
+      // Récap
+      recapName: name,
+      recapLine: race.n + (sub ? " (" + sub.n + ")" : "") + " " + klass.n + " de niveau 1, historique " + histo.n,
+      recapChips,
+      recapStats: D.STATS.map((s) => ({ label: s.n, ab: s.ab, mod: sign(modOf(totals[s.k])), total: totals[s.k] })),
+      json: JSON.stringify(out, null, 1),
+      // Navigation
+      warning,
+      frozen, notFrozen: !frozen,
+      nameSource: st.nameSource,
+      randomStyle: "min-height: 36px; padding: 0 14px; font-size: 13px; font-weight: 700; border-radius: 999px; border: 2px solid var(--accent, #8B2E2A); background: var(--panel, #FBF6E9); color: var(--ink, #2B2118); opacity: " + (st.frozen ? 0.35 : 1),
+      genName: () => { if (!st.frozen) this.setState({ name: this.makeName(st.raceId), nameSource: "Nom généré localement (liste de syllabes de ta race)." }); },
+      randomize: () => { if (!st.frozen) this.setState(this.randomState()); },
+      partieJson: JSON.stringify(partie, null, 1),
+      join: async () => {
+        if (st.join.etat === "envoi" || st.join.etat === "ok") return;
+        this.setState({ join: { etat: "envoi", msg: "Envoi à la table..." } });
+        try {
+          const r = await fetch("/api/personnages", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: slug, base: out, etat: partie.personnage_ajoute.etat }) });
+          const j = await r.json().catch(() => ({}));
+          if (r.status === 401) { this.setState({ join: { etat: "erreur", msg: "Connecte-toi d'abord sur la page de la table (mot de passe), puis reviens ici." } }); return; }
+          if (!r.ok) { this.setState({ join: { etat: "erreur", msg: j.erreur || ("Erreur " + r.status) } }); return; }
+          try { localStorage.setItem("perso", slug); } catch (e) { /* sans stockage */ }
+          this.setState({ join: { etat: "ok", msg: name + " a rejoint la table." } });
+        } catch (e) { this.setState({ join: { etat: "erreur", msg: "La table ne répond pas. Réessaie dans un instant." } }); }
+      },
+      joinLabel: st.join.etat === "ok" ? "Table rejointe" : (st.join.etat === "envoi" ? "Envoi..." : "Rejoindre la table"),
+      joinStyle: "min-height: 48px; padding: 0 22px; font-size: 16px; font-weight: 600; border-radius: var(--radius-m, 10px); border: 0; background: var(--accent, #8B2E2A); color: var(--accent-ink, #F4ECD8); opacity: " + (st.join.etat === "ok" || st.join.etat === "envoi" ? 0.5 : 1),
+      hasJoinMsg: !!st.join.msg, joinMsg: st.join.msg, joinColor: st.join.etat === "erreur" ? "var(--neg, #A12B26)" : "var(--ink, #2B2118)",
+      joinOk: st.join.etat === "ok",
+      banner: name + " est figé. La base ne pourra plus changer ; seul le MJ fera évoluer l'état.",
+      prev: () => { if (!frozen && idx > 0) this.setState({ step: stepDefs[idx - 1].id }); },
+      prevStyle: "min-height: 44px; padding: 0 18px; font-size: 15px; font-weight: 600; border-radius: var(--radius-m, 10px); border: 1px solid var(--line, #C9B88F); background: var(--panel, #FBF6E9); color: var(--ink, #2B2118); opacity: " + (!frozen && idx > 0 ? 1 : 0.35),
+      next: () => {
+        if (frozen) { this.setState({ frozen: false, join: { etat: "", msg: "" }, step: "race", name: "", nameSource: "", raceId: "goliath", subId: null, subMode: "stat", picks: [], classId: "guerrier", histoId: "soldat", cskills: [], repl: {}, skillInfo: null, cantrips: [], lvl1: [], prepared: [], base: { sol: 15, per: 12, end: 14, cha: 10, int: 10, agi: 12, zen: 11 } }); return; }
+        if (!canNext) return;
+        if (last) this.setState({ frozen: true }); else this.setState({ step: stepDefs[idx + 1].id });
+      },
+      nextLabel: frozen ? "Créer un autre personnage" : (last ? "Figer le personnage" : "Suivant"),
+      nextStyle: "min-height: 44px; padding: 0 18px; font-size: 15px; font-weight: 600; border-radius: var(--radius-m, 10px); border: 0; background: var(--accent, #8B2E2A); color: var(--accent-ink, #F4ECD8); opacity: " + (canNext ? 1 : 0.4)
+    };
+  }
+}
+</script>
+</body>
+</html>

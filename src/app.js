@@ -47,10 +47,17 @@ function vue(partie) {
   }
   return {
     nom: partie.nom, rev: partie.rev, temps: partie.temps, quetes: partie.quetes, carte: partie.carte,
-    jets_en_attente: partie.jets_en_attente, personnages: perso,
+    jets_en_attente: partie.jets_en_attente, personnages: perso, mj_occupe: mjOccupe ? { perso: mjOccupe.perso, nom: mjOccupe.nom } : null,
     journal: partie.journal.slice(-40).map(({ avant, ...e }) => e),
     texte: partie.texte.slice(-60)
   };
+}
+
+// Qui le MJ est en train de servir (en mémoire seulement, utile quand plusieurs joueurs sont connectés).
+let mjOccupe = null;
+async function enOccupe(perso, nom, fn) {
+  mjOccupe = { perso, nom, depuis: Date.now() };
+  try { return await fn(); } finally { mjOccupe = null; }
 }
 
 function creerApp({ store, mj, env }) {
@@ -88,7 +95,13 @@ function creerApp({ store, mj, env }) {
     }
   };
 
-  app.get("/api/partie", enveloppe(async (req, res) => res.json(vue(await gestion.lire()))));
+  // ?depuis=<rev>&occ=<perso> : si rien n'a changé, on renvoie juste {inchange:true} (sondage léger des autres joueurs).
+  app.get("/api/partie", enveloppe(async (req, res) => {
+    const partie = await gestion.lire();
+    const occ = mjOccupe ? mjOccupe.perso : "";
+    if (req.query.depuis !== undefined && Number(req.query.depuis) === partie.rev && (req.query.occ || "") === occ) return res.json({ inchange: true });
+    res.json(vue(partie));
+  }));
 
   app.get("/api/sorts", (req, res) => res.json(A.SORTS));
 
@@ -114,7 +127,7 @@ function creerApp({ store, mj, env }) {
       if (partie.jets_en_attente.length) throw Object.assign(new Error("un jet de dé est en attente: lancez-le d'abord"), { status: 409 });
       const ligne = "[" + p.base.nom + "] " + texte;
       partie.texte.push({ qui: "joueur", perso, minute: partie.temps.minute, texte: ligne });
-      return tourMJ(partie, mj, ligne);
+      return enOccupe(perso, p.base.nom, () => tourMJ(partie, mj, ligne));
     });
     res.json({ ...sortie, partie: vue(await gestion.lire()) });
   }));
@@ -131,7 +144,8 @@ function creerApp({ store, mj, env }) {
         (j.critique === "reussite" ? " (20 naturel)" : j.critique === "echec" ? " (1 naturel)" : "");
       partie.texte.push({ qui: "joueur", perso: partie.journal.at(-1).cible, minute: partie.temps.minute, texte: ligne, jet: j });
       if (!mj || (req.body && req.body.sans_mj)) return { resultat: j, texte: "" };
-      const m = await tourMJ(partie, mj, ligne);
+      const cible = partie.journal.at(-1).cible;
+      const m = await enOccupe(cible, nom, () => tourMJ(partie, mj, ligne));
       return { resultat: j, texte: m.texte };
     });
     res.json({ ...sortie, partie: vue(await gestion.lire()) });
@@ -144,7 +158,8 @@ function creerApp({ store, mj, env }) {
       const dernier = partie.texte.at(-1);
       if (!dernier || dernier.qui !== "joueur") throw Object.assign(new Error("rien à reprendre"), { status: 409 });
       if (partie.jets_en_attente.length) throw Object.assign(new Error("un jet de dé est en attente: lancez-le d'abord"), { status: 409 });
-      return tourMJ(partie, mj, dernier.texte);
+      const qui = dernier.perso || null;
+      return enOccupe(qui, qui && partie.personnages[qui] ? partie.personnages[qui].base.nom : "", () => tourMJ(partie, mj, dernier.texte));
     });
     res.json({ ...sortie, partie: vue(await gestion.lire()) });
   }));

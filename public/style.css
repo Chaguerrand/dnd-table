@@ -6,6 +6,7 @@
   --page:#E9DFC6; --bar:#2B2118; --bar-ink:#F4ECD8; --bar-line:#6B5A47; --chip-ink:#FBF6E9;
   --stripe:transparent; --map-floor:#E9DFC6; --map-wall:#3A2E24; --map-grid:rgba(107,90,71,0.35); --token-ink:#FFFFFF;
   --radius:12px; --radius-m:10px; --radius-s:8px;
+  --moi:#D9731A; --ennemi:#C62828;
   --font-title:Spectral, Georgia, serif; --font-body:Inter, system-ui, sans-serif;
 }
 :root[data-theme="commonwealth"] {
@@ -16,6 +17,7 @@
   --stripe:repeating-linear-gradient(-45deg, #D9A441 0 10px, #15140F 10px 20px);
   --map-floor:#4A463B; --map-wall:#14130F; --map-grid:rgba(230,223,200,0.14); --token-ink:#15140F;
   --radius:3px; --radius-m:2px; --radius-s:2px;
+  --moi:#F08A24; --ennemi:#D93B30;
   --font-title:'Special Elite', 'Courier New', monospace; --font-body:Inter, system-ui, sans-serif;
 }
 
