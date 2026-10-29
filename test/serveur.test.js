@@ -422,3 +422,10 @@ test("migration: la partie existante devient la table n°1, ses joueurs en sont 
     assert.ok((await t.gestion("t1").lire()).personnages.korga);
   } finally { srv.close(); }
 });
+
+test("résultats critiques: la ligne du jet les nomme et le MJ a la consigne", async () => {
+  const { SYSTEME } = require("../src/mj/prompt");
+  assert.match(SYSTEME, /20 naturel/);
+  assert.match(SYSTEME, /1 naturel/);
+  assert.match(SYSTEME, /pas de conséquence durable/);
+});

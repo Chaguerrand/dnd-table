@@ -164,8 +164,8 @@ h1, h2, h3 { font-family: var(--font-title); margin: 0; }
 .legende .pastille { flex: 0 0 auto; width: 26px; height: 26px; }
 
 /* Réglages */
-#reglages { position: fixed; inset: 0; z-index: 20; background: var(--panel); overflow: auto; display: flex; flex-direction: column; }
-#reglages .contenu { padding: 14px; display: flex; flex-direction: column; gap: 14px; max-width: 720px; width: 100%; margin: 0 auto; }
+#reglages, #accueil { position: fixed; inset: 0; z-index: 20; background: var(--panel); overflow: auto; display: flex; flex-direction: column; }
+#reglages .contenu, #accueil .contenu { padding: 14px; display: flex; flex-direction: column; gap: 14px; max-width: 720px; width: 100%; margin: 0 auto; }
 .choix { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .choix button { text-align: left; padding: 12px; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--panel); color: var(--ink); display: flex; flex-direction: column; gap: 4px; min-height: 64px; }
 .choix button.on { border: 2px solid var(--accent); }

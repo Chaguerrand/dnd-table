@@ -54,6 +54,8 @@ const etat = {
   onglet: lireLocal("onglet", "texte"), ficheOnglet: "base", ouvert: {}, filtre: "all", legende: true, jetEnCours: null, occupe: false,
   sorts: null, serveur: { mot_de_passe: false, version: "" }, reglagesOuverts: false, ajout: false, message: ""
 };
+etat.tableId = lireLocal("table", "");
+etat.tables = []; etat.biblio = []; etat.moiCompte = null; etat.messageAccueil = "";
 
 function echapper(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 const sg = (n) => (n > 0 ? "+" + n : String(n));
@@ -61,8 +63,10 @@ const fmt = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
 const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 const cle = (s) => norm(s).replace(/\s+/g, "-");
 
+// La table courante est envoyée à chaque requête (en-tête X-Table).
+function entetes(extra) { const h = Object.assign({}, extra || {}); if (etat.tableId) h["x-table"] = etat.tableId; return h; }
 async function api(url, corps) {
-  const r = await fetch(url, corps === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(corps) });
+  const r = await fetch(url, corps === undefined ? { headers: entetes() } : { method: "POST", headers: entetes({ "content-type": "application/json" }), body: JSON.stringify(corps) });
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && j.etape) { montrerConnexion(j.etape); throw new Error("connexion requise"); }
   if (!r.ok) throw Object.assign(new Error(j.erreur || ("erreur " + r.status)), { etape: j.etape });
@@ -70,7 +74,7 @@ async function api(url, corps) {
 }
 let modeCompte = "connexion";
 function montrerConnexion(etape) {
-  $("connexion").hidden = false; $("app").hidden = true; $("reglages").hidden = true; etat.reglagesOuverts = false;
+  $("connexion").hidden = false; $("app").hidden = true; $("reglages").hidden = true; $("accueil").hidden = true; etat.reglagesOuverts = false;
   $("etape-table").hidden = etape !== "table"; $("etape-compte").hidden = etape !== "compte"; $("etape-aucune").hidden = etape !== "aucune";
   majModeCompte();
 }
@@ -490,9 +494,17 @@ function rendreReglages() {
         (moi.superadmin ? '<input id="reinit-' + i + '" type="text" maxlength="8" autocomplete="off" autocapitalize="off" placeholder="Nouveau code (8 caractères)"><button type="button" class="btn sec" data-a="reinit" data-v="' + i + '">Réinitialiser son code</button>' : "") + "</div></div>").join("") +
       (o.sans_joueur.length ? '<div class="doux">Personnages sans joueur</div>' + o.sans_joueur.map((x, i) => '<div class="depli"><div class="corps" style="padding-top:12px"><b>' + echapper(x.nom) + '</b><select id="attr-' + i + '">' + o.joueurs.map((j) => '<option value="' + echapper(j.pseudo) + '">' + echapper(j.pseudo) + "</option>").join("") + '</select><button type="button" class="btn sec" data-a="attribuer" data-v="' + i + '">Attribuer à ce joueur</button></div></div>').join("") : "") + "</div>";
   }
+  const tcur = (etat.tables || []).find((t) => t.id === etat.tableId);
+  let tableBloc = "";
+  if (orga && tcur) {
+    const membres = (tcur.membres || []).map((m) => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>' + echapper(m) + '</b><button type="button" class="btn sec" data-t="retirer" data-v="' + echapper(m) + '">Retirer</button></div>').join("");
+    tableBloc = '<div class="boite"><h2>Table : ' + echapper(tcur.nom) + '</h2><div class="doux">Joueurs invités (l\'accès se fait sur invitation de pseudo)</div>' + (membres || '<div class="doux">Personne pour l\'instant.</div>') +
+      '<input id="inviter-pseudo" type="text" maxlength="24" autocomplete="off" autocapitalize="off" placeholder="Pseudo à inviter"><button type="button" class="btn" data-t="inviter">Inviter</button>' +
+      (moi.superadmin ? '<div class="doux">Organisateur de la table' + (tcur.organisateur ? " (actuellement " + echapper(tcur.organisateur) + ")" : "") + '. Laisse vide pour reprendre la main.</div><input id="orga-pseudo" type="text" maxlength="24" autocomplete="off" autocapitalize="off" placeholder="Pseudo de l\'organisateur"><button type="button" class="btn sec" data-t="organisateur">Désigner l\'organisateur</button>' : "") + "</div>";
+  }
   $("c-reglages").innerHTML =
     '<div class="boite"><h2>Personnage</h2>' + persoBloc + "</div>" +
-    compte + organisateur +
+    compte + tableBloc + organisateur +
     '<div class="boite"><h2>Thème</h2>' + choix(THEMES, etat.theme, "theme") + "</div>" +
     (window.innerWidth >= 700 ? '<div class="boite"><h2>Disposition</h2>' + choix(DISPOSITIONS, etat.disposition, "disposition") + '<div class="doux">Pour grand écran. Sur téléphone, les onglets suffisent.</div></div>' : "") +
     (orga ? '<div class="boite"><h2>Sauvegarde</h2><div class="doux">Télécharge toute la partie dans un fichier, ou recharge un fichier. Charger une sauvegarde remplace la partie en cours.</div>' +
@@ -503,7 +515,7 @@ function rendreReglages() {
 }
 async function chargerOrga() {
   if (!etat.partie || !etat.partie.moi || etat.partie.moi.role !== "organisateur") return;
-  try { etat.orga = await api("/api/compte"); if (etat.reglagesOuverts) rendreReglages(); } catch (e) { /* sans effet */ }
+  try { etat.orga = await api("/api/compte"); etat.tables = await api("/api/tables"); if (etat.reglagesOuverts) rendreReglages(); } catch (e) { /* sans effet */ }
 }
 function ouvrirReglages(o) {
   etat.reglagesOuverts = o; $("reglages").hidden = !o; etat.message = "";
@@ -601,7 +613,7 @@ async function sonder() {
   if (!etat.partie || etat.occupe || document.hidden || etat.jetEnCours) return;
   try {
     const occ = etat.partie.mj_occupe ? etat.partie.mj_occupe.perso || "" : "";
-    const r = await fetch("/api/partie?depuis=" + etat.partie.rev + "&occ=" + encodeURIComponent(occ));
+    const r = await fetch("/api/partie?depuis=" + etat.partie.rev + "&occ=" + encodeURIComponent(occ), { headers: entetes() });
     if (!r.ok || etat.occupe || etat.jetEnCours) return;
     const j = await r.json();
     if (j.inchange) return;
@@ -612,19 +624,93 @@ setInterval(sonder, 4000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) sonder(); });
 window.addEventListener("resize", () => { if (etat.partie) appliquerMise(); });
 
-async function demarrer() {
-  try {
-    const p = await api("/api/partie");
-    afficher(p);
-  } catch (e) {
-    // Compte valide mais invité à aucune table: on l'explique, avec le pseudo à communiquer à l'organisateur.
-    if (e.etape === "aucune_table") {
-      const c = await api("/api/compte").catch(() => null);
-      $("pseudo-aucune").textContent = c ? c.moi.pseudo : "";
-      montrerConnexion("aucune");
-    }
-  }
+/* ---------- Tables: accueil, entrée, invitations ---------- */
+function choisirTable(id) { etat.tableId = id || ""; ecrireLocal("table", etat.tableId); etat.partie = null; etat.orga = null; cleJet = ""; }
+async function entrerTable(id) {
+  choisirTable(id);
+  const p = await api("/api/partie");
+  $("accueil").hidden = true;
+  afficher(p);
+  chargerOrga();
 }
+async function chargerAccueil() {
+  const [c, t, b] = await Promise.all([api("/api/compte"), api("/api/tables"), api("/api/personnages")]);
+  etat.moiCompte = c.moi; etat.tables = t; etat.biblio = b;
+}
+function rendreAccueil() {
+  const moi = etat.moiCompte || {};
+  $("fermer-accueil").hidden = !etat.partie;
+  const cartes = etat.tables.map((t) => {
+    const choixPerso = etat.biblio.length ?
+      '<select id="choix-' + echapper(t.id) + '">' + etat.biblio.map((p) => '<option value="' + echapper(p.id) + '">' + echapper(p.nom + " (" + p.race + " " + p.classe + ", niveau " + p.niveau + ")") + "</option>").join("") + "</select>" +
+      '<button type="button" class="btn sec" data-t="rejoindre" data-v="' + echapper(t.id) + '">Rejoindre avec ce personnage</button>' : "";
+    const sansPerso = !t.mon_perso ? '<div class="doux">Tu n\'as pas de personnage à cette table.</div>' + choixPerso +
+      '<a class="btn sec" data-t="creer-perso" data-v="' + echapper(t.id) + '" href="/creation.html" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Créer un nouveau personnage</a>' : "";
+    return '<div class="boite"><h2>' + echapper(t.nom) + '</h2><div class="tags"><span class="tag ' + (t.role === "organisateur" ? "info" : "") + '">' + (t.role === "organisateur" ? "Organisateur" : "Joueur") + "</span>" +
+      (t.organisateur ? '<span class="tag">Orga : ' + echapper(t.organisateur) + "</span>" : "") + (t.mon_perso ? '<span class="tag">' + echapper(t.mon_perso.nom) + "</span>" : "") + "</div>" +
+      sansPerso + '<button type="button" class="btn" data-t="entrer" data-v="' + echapper(t.id) + '">Entrer sur la table</button></div>';
+  }).join("");
+  const vide = !etat.tables.length ? '<div class="boite"><h2>Aucune table</h2><div class="doux">Tu es connecté en tant que <b>' + echapper(moi.pseudo || "") + "</b>, mais tu n'as été invité à aucune table. Donne ce pseudo à l'organisateur : il t'invite, puis recharge cette page.</div></div>" : "";
+  const creer = moi.superadmin ? '<div class="boite"><h2>Créer une table</h2><div class="doux">Une table = une quête. Tu en es l\'organisateur, et tu peux en désigner un autre ensuite.</div><input id="nom-table" type="text" maxlength="60" placeholder="Nom de la table"><button type="button" class="btn" data-t="creer-table">Créer la table</button></div>' : "";
+  $("c-accueil").innerHTML = cartes + vide + creer + (etat.messageAccueil ? '<div class="' + (/créée/.test(etat.messageAccueil) ? "doux" : "erreur") + '">' + echapper(etat.messageAccueil) + "</div>" : "") +
+    '<div class="boite"><div>Connecté : <b>' + echapper(moi.pseudo || "") + '</b></div><button type="button" class="btn sec" data-t="deconnexion">Me déconnecter</button></div>';
+}
+async function montrerAccueil() {
+  $("connexion").hidden = true; $("reglages").hidden = true; etat.reglagesOuverts = false;
+  $("app").hidden = true; $("accueil").hidden = false;
+  try { await chargerAccueil(); } catch (e) { return; }
+  rendreAccueil();
+}
+async function demarrer() {
+  let tables, compte;
+  try { [compte, tables] = await Promise.all([api("/api/compte"), api("/api/tables")]); } catch (e) { return; }
+  etat.moiCompte = compte.moi; etat.tables = tables;
+  const connue = tables.find((t) => t.id === etat.tableId);
+  if (connue) return entrerTable(connue.id).catch(() => montrerAccueil());
+  // une seule table et pas superadmin: on y entre directement
+  if (tables.length === 1 && !compte.moi.superadmin) return entrerTable(tables[0].id).catch(() => montrerAccueil());
+  return montrerAccueil();
+}
+// Actions des écrans de tables (attribut data-t).
+document.addEventListener("click", async (ev) => {
+  const el = ev.target.closest("[data-t]");
+  if (!el) return;
+  const a = el.dataset.t, v = el.dataset.v;
+  const rafraichir = async () => { await chargerAccueil(); if (!$("accueil").hidden) rendreAccueil(); if (etat.reglagesOuverts) rendreReglages(); };
+  try {
+    etat.messageAccueil = ""; etat.message = "";
+    if (a === "entrer") { await entrerTable(v); }
+    else if (a === "creer-perso") { ecrireLocal("table", v); /* le lien ouvre la page de création, qui rejoint cette table */ }
+    else if (a === "creer-table") {
+      const t = await api("/api/tables", { nom: $("nom-table").value });
+      await rafraichir(); etat.messageAccueil = "Table « " + t.nom + " » créée."; rendreAccueil();
+    }
+    else if (a === "rejoindre") {
+      await api("/api/tables/" + v + "/rejoindre", { perso: $("choix-" + v).value });
+      await entrerTable(v);
+    }
+    else if (a === "inviter") {
+      await api("/api/tables/" + etat.tableId + "/inviter", { pseudo: $("inviter-pseudo").value });
+      etat.message = "Invitation envoyée."; await rafraichir();
+    }
+    else if (a === "retirer") {
+      await api("/api/tables/" + etat.tableId + "/retirer", { pseudo: v });
+      etat.message = v + " est retiré de la table."; await rafraichir();
+    }
+    else if (a === "organisateur") {
+      await api("/api/tables/" + etat.tableId + "/organisateur", { pseudo: $("orga-pseudo").value });
+      etat.message = "Organisateur mis à jour."; await rafraichir();
+    }
+    else if (a === "deconnexion") { await api("/api/compte/deconnexion", {}); choisirTable(""); modeCompte = "connexion"; $("accueil").hidden = true; montrerConnexion("compte"); }
+  } catch (e) {
+    if (e.message === "connexion requise") return;
+    etat.message = e.message; etat.messageAccueil = e.message;
+    if (!$("accueil").hidden) rendreAccueil(); else if (etat.reglagesOuverts) rendreReglages();
+  }
+});
+$("ouvrir-accueil").onclick = () => montrerAccueil();
+$("fermer-accueil").onclick = () => { $("accueil").hidden = true; $("app").hidden = false; };
+
 fetch("/sante").then((r) => r.json()).then((j) => { etat.serveur = { mot_de_passe: !!j.mot_de_passe, version: j.version }; $("version").textContent = "Version " + j.version; }).catch(() => {});
 document.documentElement.setAttribute("data-theme", THEMES[etat.theme] ? etat.theme : "commonwealth");
 demarrer().catch(() => {});

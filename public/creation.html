@@ -801,12 +801,13 @@ class Component extends DCLogic {
         if (st.join.etat === "envoi" || st.join.etat === "ok") return;
         this.setState({ join: { etat: "envoi", msg: "Envoi à la table..." } });
         try {
-          const r = await fetch("/api/personnages", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: slug, base: out, etat: partie.personnage_ajoute.etat }) });
+          let tbl = ""; try { tbl = localStorage.getItem("table") || ""; } catch (e) { /* sans stockage */ }
+          const r = await fetch("/api/personnages", { method: "POST", headers: Object.assign({ "content-type": "application/json" }, tbl ? { "x-table": tbl } : {}), body: JSON.stringify({ id: slug, base: out, etat: partie.personnage_ajoute.etat }) });
           const j = await r.json().catch(() => ({}));
           if (r.status === 401) { this.setState({ join: { etat: "erreur", msg: "Connecte-toi d'abord sur la page de la table (mot de passe), puis reviens ici." } }); return; }
           if (!r.ok) { this.setState({ join: { etat: "erreur", msg: j.erreur || ("Erreur " + r.status) } }); return; }
           try { localStorage.setItem("perso", slug); } catch (e) { /* sans stockage */ }
-          this.setState({ join: { etat: "ok", msg: name + " a rejoint la table." } });
+          this.setState({ join: { etat: "ok", msg: j.journal !== undefined ? name + " a rejoint la table." : name + " est enregistré dans ta bibliothèque. Rejoins une table depuis la page de la table (bouton Tables)." } });
         } catch (e) { this.setState({ join: { etat: "erreur", msg: "La table ne répond pas. Réessaie dans un instant." } }); }
       },
       joinLabel: st.join.etat === "ok" ? "Table rejointe" : (st.join.etat === "envoi" ? "Envoi..." : "Rejoindre la table"),

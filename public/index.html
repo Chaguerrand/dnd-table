@@ -41,7 +41,7 @@
 <div id="app" data-disp="onglets" hidden>
   <div class="barre">
     <h1 id="titre">Table de jeu</h1>
-    <button class="btn-barre" id="ouvrir-reglages" type="button">Réglages</button>
+    <div style="display:flex;gap:8px"><button class="btn-barre" id="ouvrir-accueil" type="button">Tables</button><button class="btn-barre" id="ouvrir-reglages" type="button">Réglages</button></div>
   </div>
   <div class="stripe"></div>
 
@@ -79,6 +79,15 @@
   </div>
   <div class="stripe"></div>
   <div class="contenu" id="c-reglages"></div>
+</section>
+
+<section id="accueil" hidden>
+  <div class="barre">
+    <h1>Tables</h1>
+    <button class="btn-barre" id="fermer-accueil" type="button" hidden>Retour</button>
+  </div>
+  <div class="stripe"></div>
+  <div class="contenu" id="c-accueil"></div>
 </section>
 
 <script src="de.js"></script>

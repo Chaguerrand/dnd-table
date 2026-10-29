@@ -225,7 +225,8 @@ function creerApp({ store, mj, env }) {
     try { await resoudreTable(req); } catch (e) { /* pas de table courante: on renvoie juste le compte */ }
     if (req.table && req.droit === "organisateur") {
       const partie = await req.gestion.lire();
-      sortie.joueurs = (await comptes.lister()).map((j) => ({
+      // le superadmin voit tous les comptes; un organisateur délégué, seulement les membres de sa table
+      sortie.joueurs = (await comptes.lister()).filter((j) => req.joueur.role === "superadmin" || req.table.membres.includes(j.cle)).map((j) => ({
         pseudo: j.pseudo, role: j.role,
         personnages: Object.values(partie.personnages).filter((p) => p.joueur === j.cle).map((p) => ({ id: p.id, nom: p.base.nom }))
       }));
@@ -369,7 +370,7 @@ function creerApp({ store, mj, env }) {
       const nom = partie.personnages[cible].base.nom;
       const ligne = "[Jet de dé] " + nom + " (" + j.nom + "): " + j.tirages.join(" et ") + (j.modificateur ? (j.modificateur > 0 ? " + " : " - ") + Math.abs(j.modificateur) : "") +
         " = " + j.total + (j.dd != null ? " contre " + j.dd + (j.reussi ? " : réussite" : " : échec") : "") +
-        (j.critique === "reussite" ? " (20 naturel)" : j.critique === "echec" ? " (1 naturel)" : "");
+        (j.critique === "reussite" ? " (20 naturel : réussite critique)" : j.critique === "echec" ? " (1 naturel : échec critique)" : "");
       partie.texte.push({ qui: "joueur", perso: cible, minute: partie.temps.minute, texte: ligne, jet: j });
       if (!mj || (req.body && req.body.sans_mj)) return { resultat: j, texte: "" };
       const m = await enOccupe(req.table.id, cible, nom, () => tourMJ(partie, mj, ligne));
