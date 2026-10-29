@@ -181,6 +181,6 @@ test("objectifs et journal de quête", () => {
 
 test("déclarations d'outils: une par action, schéma complet", () => {
   const d = A.declarationsOutils();
-  assert.equal(d.length, 15);
+  assert.equal(d.length, 16);
   assert.ok(d.every((x) => x.nom && x.description && x.parametres));
 });

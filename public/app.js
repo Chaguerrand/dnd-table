@@ -64,18 +64,27 @@ const cle = (s) => norm(s).replace(/\s+/g, "-");
 async function api(url, corps) {
   const r = await fetch(url, corps === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(corps) });
   const j = await r.json().catch(() => ({}));
-  if (r.status === 401 && url !== "/api/connexion") { montrerConnexion(); throw new Error("connexion requise"); }
+  if (r.status === 401 && j.etape) { montrerConnexion(j.etape); throw new Error("connexion requise"); }
   if (!r.ok) throw new Error(j.erreur || ("erreur " + r.status));
   return j;
 }
-function montrerConnexion() { $("connexion").hidden = false; $("app").hidden = true; }
+let modeCompte = "connexion";
+function montrerConnexion(etape) {
+  $("connexion").hidden = false; $("app").hidden = true; $("reglages").hidden = true; etat.reglagesOuverts = false;
+  $("etape-table").hidden = etape !== "table"; $("etape-compte").hidden = etape !== "compte";
+  majModeCompte();
+}
+function majModeCompte() {
+  const creer = modeCompte === "creation";
+  $("titre-compte").textContent = creer ? "Créer ton compte" : "Connexion";
+  $("valider-compte").textContent = creer ? "Créer mon compte" : "Me connecter";
+  $("bascule-compte").textContent = creer ? "J'ai déjà un compte" : "Créer un compte";
+  $("aide-code").hidden = !creer;
+}
 
 function persoActif() {
   const p = etat.partie; if (!p) return null;
-  const ids = Object.keys(p.personnages);
-  if (!ids.length) return null;
-  if (!p.personnages[etat.perso]) etat.perso = ids[0];
-  return p.personnages[etat.perso];
+  return Object.values(p.personnages).find((c) => c.a_moi) || null;
 }
 
 /* ---------- Thème et disposition ---------- */
@@ -100,7 +109,6 @@ function afficher(p) {
   etat.partie = p;
   $("connexion").hidden = true; $("app").hidden = false;
   appliquerMise();
-  if (!lireLocal("perso", "") && Object.keys(p.personnages).length > 1 && !etat.reglagesOuverts && !etat.choixDemande) { etat.choixDemande = true; ouvrirReglages(true); }
   rendreTexte(); rendreCarte(); rendreFiche(); rendreInventaire(); rendreQuetes();
   if (etat.reglagesOuverts) rendreReglages();
   majControles();
@@ -113,6 +121,7 @@ function majControles() {
   $("dire").disabled = occ || jet || !persoActif();
   $("texte").disabled = occ || jet || !persoActif();
   $("annuler").disabled = occ;
+  $("annuler").hidden = !(p && p.moi && p.moi.role === "organisateur");
   const dernier = p && p.texte.length ? p.texte[p.texte.length - 1] : null;
   $("reprise").hidden = !(dernier && dernier.qui === "joueur" && !jet && !occ && !etat.jetEnCours);
   document.querySelectorAll("#zone-jet button").forEach((b) => { b.disabled = occ; });
@@ -120,15 +129,15 @@ function majControles() {
   const att = $("attente");
   if (!occ) {
     const mo = p && p.mj_occupe;
-    att.hidden = !mo; if (mo) att.textContent = "Le MJ répond à " + (mo.nom || "un joueur") + "...";
+    att.hidden = !mo; if (mo) att.textContent = mo.nom ? "Le MJ répond à " + mo.nom + "..." : "Le MJ est occupé un instant...";
   }
-  $("qui-joue").textContent = c ? "Tu joues : " + c.base.nom : "Aucun personnage : ouvre les réglages pour en ajouter un.";
+  $("qui-joue").textContent = c ? "Tu joues : " + c.base.nom : "Tu n'as pas encore de personnage à cette table : ouvre les réglages pour en créer un.";
 }
 
 function rendreTexte() {
   const p = etat.partie;
   $("histoire").innerHTML = p.texte.slice().reverse().map((t) =>
-    '<div class="msg ' + (t.qui === "mj" ? "mj" : "joueur") + '">' + echapper(t.texte) +
+    '<div class="msg ' + (t.qui === "mj" ? "mj" : "joueur") + (t.prive_a || t.prive_de ? " prive" : "") + '">' + (t.prive_a || t.prive_de ? '<div class="etiquette-prive">Privé, toi seul le vois</div>' : "") + echapper(t.texte) +
     (t.duree_s != null ? '<div class="duree">Réponse en ' + String(t.duree_s).replace(".", ",") + " s</div>" : "") + "</div>").join("") ||
     '<div class="vide">Rien n\'a encore été dit. Écris ce que fait ton personnage.</div>';
   rendreJet();
@@ -235,16 +244,18 @@ async function agir(fn) {
 }
 
 $("dire").onclick = () => {
-  const t = $("texte").value.trim(); if (!t) return;
+  let t = $("texte").value.trim(); if (!t) return;
   const c = persoActif(); if (!c) return;
+  const prive = /^\/dmj(\s|$)/i.test(t);
+  if (prive) { t = t.replace(/^\/dmj\s*/i, "").trim(); if (!t) { $("err").textContent = "Écris ton message après /dmj."; return; } }
   agir(async () => {
     $("texte").value = "";
     cleJet = "";
     // ta phrase s'affiche tout de suite, avant la réponse du MJ
-    etat.partie = { ...etat.partie, texte: [...etat.partie.texte, { qui: "joueur", texte: "[" + c.base.nom + "] " + t }] };
+    etat.partie = { ...etat.partie, texte: [...etat.partie.texte, { qui: "joueur", texte: "[" + c.base.nom + "]" + (prive ? " (en privé au MJ)" : "") + " " + t, ...(prive ? { prive_de: c.id } : {}) }] };
     rendreTexte();
-    try { const r = await api("/api/dire", { perso: c.id, texte: t }); etat.partie = r.partie; }
-    catch (e) { $("texte").value = t; throw e; }
+    try { const r = await api("/api/dire", { perso: c.id, texte: t, prive }); etat.partie = r.partie; }
+    catch (e) { $("texte").value = (prive ? "/dmj " : "") + t; throw e; }
   });
 };
 $("texte").addEventListener("keydown", (e) => { if (e.key === "Enter") $("dire").click(); });
@@ -263,7 +274,7 @@ function rendreCarte() {
     if (j.orientation === "profil") [prof, larg] = [larg, prof];
     const c = p.personnages[id];
     let fond = "var(--ennemi)";
-    if (c) fond = actif && id === actif.id ? "var(--moi)" : "var(--info)";
+    if (c) fond = c.a_moi ? "var(--moi)" : "var(--info)";
     else if (j.camp === "allie") fond = "var(--pos)";
     const encre = "var(--token-ink)";
     const rond = prof === 1 && larg === 1;
@@ -356,7 +367,12 @@ function ficheBase(c) {
     const prof2 = v - mod !== 0;
     return '<div class="comp"><span>' + (prof2 ? "● " : "") + court(s) + "</span><b>" + sg(v) + "</b></div>";
   }).join("");
-  return '<div class="boite"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px"><h2>Caractéristiques</h2><span class="doux">Toucher pour voir la composition</span></div>' + stats + "</div>" +
+  const autres = Object.values(etat.partie.personnages).filter((x) => !x.a_moi);
+  const compagnons = autres.length ? '<div class="boite"><h2>À la table</h2>' + autres.map((x) =>
+    '<div class="depli"><div class="corps" style="padding-top:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + echapper(x.base.nom) + '</b><span class="doux">' + echapper([x.base.race, x.base.classe, "niveau " + x.base.niveau].join(", ")) + "</span></div>" +
+    '<div class="tags"><span class="tag">PV ' + x.etat.pv + " / " + x.calcul.pv_max + "</span>" + (x.joueur ? '<span class="tag info">' + echapper(x.joueur) + "</span>" : "") +
+    (x.equipe && x.equipe.length ? x.equipe.map((n) => '<span class="tag">' + echapper(n) + "</span>").join("") : '<span class="doux">Rien de visible porté</span>') + "</div></div></div>").join("") + "</div>" : "";
+  return compagnons + '<div class="boite"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px"><h2>Caractéristiques</h2><span class="doux">Toucher pour voir la composition</span></div>' + stats + "</div>" +
     '<div class="boite"><h2>Bonus et malus actifs</h2>' + effets + "</div>" +
     '<div class="boite"><h2>Taille et empreinte</h2><div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap"><div class="empreinte" style="grid-template-columns:repeat(' + larg + ',36px)">' + cases.join("") + '</div><div><b>' + echapper(b.taille || "Moyenne") + " : " + prof + " x " + larg + "</b></div></div>" +
     '<div class="doux">Profondeur x largeur. De profil : vitesse et portée réduites. Impossible à dépasser dans un couloir d\'une case.</div></div>' +
@@ -453,27 +469,45 @@ function rendreQuetes() {
 /* ---------- Réglages ---------- */
 function rendreReglages() {
   const p = etat.partie;
-  const ids = p ? Object.keys(p.personnages) : [];
+  const moi = (p && p.moi) || {};
+  const orga = moi.role === "organisateur";
   const choix = (liste, actuel, action) => '<div class="choix">' + Object.keys(liste).map((k) => '<button type="button" class="' + (k === actuel ? "on" : "") + '" data-a="' + action + '" data-v="' + k + '"><b>' + echapper(liste[k][0]) + "</b><span>" + echapper(liste[k][1]) + "</span></button>").join("") + "</div>";
-  const persos = ids.length ? '<div class="choix">' + ids.map((id) => {
-    const c = p.personnages[id];
-    return '<button type="button" class="' + (persoActif() && persoActif().id === id ? "on" : "") + '" data-a="choisir-perso" data-v="' + echapper(id) + '"><b>' + echapper(c.base.nom) + "</b><span>" + echapper(c.base.race + " " + c.base.classe + ", niveau " + c.base.niveau) + "</span></button>";
-  }).join("") + "</div>" : '<div class="doux">Aucun personnage à la table.</div>';
-  const ajout = '<a class="btn" href="/creation.html" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Créer un personnage</a><button type="button" class="btn sec" data-a="essai">Ajouter le personnage d\'essai</button>';
+  const mien = persoActif();
+  const persoBloc = mien ?
+    '<div class="choix"><button type="button" class="on" style="cursor:default"><b>' + echapper(mien.base.nom) + "</b><span>" + echapper(mien.base.race + " " + mien.base.classe + ", niveau " + mien.base.niveau) + "</span></button></div>" :
+    '<div class="doux">Tu n\'as pas encore de personnage à cette table.</div><a class="btn" href="/creation.html" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Créer un personnage</a><button type="button" class="btn sec" data-a="essai">Ajouter le personnage d\'essai</button>';
+  const champ = (id, ph) => '<input id="' + id + '" type="password" maxlength="8" autocomplete="off" autocapitalize="off" placeholder="' + ph + '">';
+  const compte = '<div class="boite"><h2>Compte</h2><div>Pseudo : <b>' + echapper(moi.pseudo || "") + "</b>" + (orga ? ' <span class="tag info">Organisateur</span>' : "") + "</div>" +
+    '<div class="doux">Changer mon code (8 lettres ou chiffres)</div>' + champ("code-ancien", "Code actuel") + champ("code-nouveau", "Nouveau code") +
+    '<button type="button" class="btn sec" data-a="changer-code">Changer mon code</button>' +
+    '<button type="button" class="btn sec" data-a="deconnexion">Me déconnecter</button></div>';
+  let organisateur = "";
+  if (orga) {
+    const o = etat.orga;
+    if (!o) organisateur = '<div class="boite"><h2>Organisateur</h2><div class="doux">Chargement...</div></div>';
+    else organisateur = '<div class="boite"><h2>Organisateur</h2><div class="doux">Joueurs de la table</div>' +
+      o.joueurs.map((j, i) => '<div class="depli"><div class="corps" style="padding-top:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + echapper(j.pseudo) + '</b><span class="doux">' + (j.personnages.map((x) => echapper(x.nom)).join(", ") || "aucun personnage") + "</span></div>" +
+        '<input id="reinit-' + i + '" type="text" maxlength="8" autocomplete="off" autocapitalize="off" placeholder="Nouveau code (8 caractères)"><button type="button" class="btn sec" data-a="reinit" data-v="' + i + '">Réinitialiser son code</button></div></div>').join("") +
+      (o.sans_joueur.length ? '<div class="doux">Personnages sans joueur</div>' + o.sans_joueur.map((x, i) => '<div class="depli"><div class="corps" style="padding-top:12px"><b>' + echapper(x.nom) + '</b><select id="attr-' + i + '">' + o.joueurs.map((j) => '<option value="' + echapper(j.pseudo) + '">' + echapper(j.pseudo) + "</option>").join("") + '</select><button type="button" class="btn sec" data-a="attribuer" data-v="' + i + '">Attribuer à ce joueur</button></div></div>').join("") : "") + "</div>";
+  }
   $("c-reglages").innerHTML =
-    '<div class="boite"><h2>Personnage</h2>' + persos + ajout + "</div>" +
+    '<div class="boite"><h2>Personnage</h2>' + persoBloc + "</div>" +
+    compte + organisateur +
     '<div class="boite"><h2>Thème</h2>' + choix(THEMES, etat.theme, "theme") + "</div>" +
     (window.innerWidth >= 700 ? '<div class="boite"><h2>Disposition</h2>' + choix(DISPOSITIONS, etat.disposition, "disposition") + '<div class="doux">Pour grand écran. Sur téléphone, les onglets suffisent.</div></div>' : "") +
-    '<div class="boite"><h2>Connexion</h2>' + (etat.serveur.mot_de_passe ? '<input id="mdp2" type="password" placeholder="Mot de passe de la table" autocomplete="current-password"><button type="button" class="btn" data-a="connecter">Se connecter</button>' : '<div class="doux">Cette table n\'a pas de mot de passe.</div>') + '<div class="doux">Tu es connecté tant que cette page charge la partie.</div></div>' +
-    '<div class="boite"><h2>Sauvegarde</h2><div class="doux">Télécharge toute la partie dans un fichier, ou recharge un fichier. Charger une sauvegarde remplace la partie en cours.</div>' +
+    (orga ? '<div class="boite"><h2>Sauvegarde</h2><div class="doux">Télécharge toute la partie dans un fichier, ou recharge un fichier. Charger une sauvegarde remplace la partie en cours.</div>' +
     '<button type="button" class="btn sec" data-a="telecharger">Télécharger la sauvegarde</button>' +
-    '<button type="button" class="btn sec" data-a="charger-fichier">Charger une sauvegarde</button><input type="file" id="fichier" accept="application/json,.json" hidden></div>' +
+    '<button type="button" class="btn sec" data-a="charger-fichier">Charger une sauvegarde</button><input type="file" id="fichier" accept="application/json,.json" hidden></div>' : "") +
     (etat.message ? '<div class="erreur" id="msg-reglages">' + echapper(etat.message) + "</div>" : "") +
     '<div class="doux">Version ' + echapper(etat.serveur.version) + "</div>";
 }
+async function chargerOrga() {
+  if (!etat.partie || !etat.partie.moi || etat.partie.moi.role !== "organisateur") return;
+  try { etat.orga = await api("/api/compte"); if (etat.reglagesOuverts) rendreReglages(); } catch (e) { /* sans effet */ }
+}
 function ouvrirReglages(o) {
   etat.reglagesOuverts = o; $("reglages").hidden = !o; etat.message = "";
-  if (o) rendreReglages();
+  if (o) { rendreReglages(); chargerOrga(); }
 }
 $("ouvrir-reglages").onclick = () => ouvrirReglages(true);
 $("fermer-reglages").onclick = () => ouvrirReglages(false);
@@ -506,17 +540,26 @@ document.addEventListener("click", async (ev) => {
       const r = await api("/api/action", { action: "equiper", params: { cible: c.id, objet: v, equipe: el.dataset.e === "1" } });
       etat.partie = r.partie; relance();
     }
-    else if (a === "choisir-perso") { etat.perso = v; ecrireLocal("perso", v); relance(); }
     else if (a === "theme") { etat.theme = v; ecrireLocal("theme", v); relance(); }
     else if (a === "disposition") { etat.disposition = v; ecrireLocal("disposition", v); relance(); }
     else if (a === "essai") {
       await api("/api/personnages", ESSAI);
-      etat.perso = ESSAI.id; ecrireLocal("perso", ESSAI.id);
       etat.partie = await api("/api/partie"); relance();
     }
-    else if (a === "connecter") {
-      await api("/api/connexion", { mot_de_passe: $("mdp2").value });
-      etat.partie = await api("/api/partie"); etat.message = ""; relance();
+    else if (a === "changer-code") {
+      await api("/api/compte/code", { ancien: $("code-ancien").value, nouveau: $("code-nouveau").value });
+      etat.message = "Code changé."; rendreReglages();
+    }
+    else if (a === "deconnexion") { await api("/api/compte/deconnexion", {}); etat.partie = null; etat.orga = null; modeCompte = "connexion"; montrerConnexion("compte"); }
+    else if (a === "reinit") {
+      const j = etat.orga.joueurs[Number(v)];
+      await api("/api/organisateur/reinitialiser", { pseudo: j.pseudo, code: $("reinit-" + v).value });
+      etat.message = "Nouveau code enregistré pour " + j.pseudo + ". Transmets-le lui."; rendreReglages();
+    }
+    else if (a === "attribuer") {
+      const x = etat.orga.sans_joueur[Number(v)];
+      await api("/api/organisateur/attribuer", { perso: x.id, pseudo: $("attr-" + v).value });
+      etat.partie = await api("/api/partie"); etat.message = x.nom + " est attribué."; afficher(etat.partie); chargerOrga();
     }
     else if (a === "telecharger") { await telecharger(); }
     else if (a === "charger-fichier") { $("fichier").click(); }
@@ -539,9 +582,19 @@ document.addEventListener("change", async (ev) => {
 $("entrer").onclick = async () => {
   $("err-connexion").textContent = "";
   try { await api("/api/connexion", { mot_de_passe: $("mdp").value }); await demarrer(); }
-  catch (e) { $("err-connexion").textContent = e.message; }
+  catch (e) { if (e.message !== "connexion requise") $("err-connexion").textContent = e.message; }
 };
 $("mdp").addEventListener("keydown", (e) => { if (e.key === "Enter") $("entrer").click(); });
+$("valider-compte").onclick = async () => {
+  $("err-compte").textContent = "";
+  try {
+    await api(modeCompte === "creation" ? "/api/compte/creer" : "/api/compte/connexion", { pseudo: $("pseudo").value, code: $("code").value });
+    $("code").value = ""; modeCompte = "connexion";
+    await demarrer();
+  } catch (e) { if (e.message !== "connexion requise") $("err-compte").textContent = e.message; }
+};
+$("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("valider-compte").click(); });
+$("bascule-compte").onclick = () => { modeCompte = modeCompte === "creation" ? "connexion" : "creation"; $("err-compte").textContent = ""; majModeCompte(); };
 // Sondage léger: les autres joueurs voient les nouveautés sans recharger.
 async function sonder() {
   if (!etat.partie || etat.occupe || document.hidden || etat.jetEnCours) return;

@@ -174,3 +174,6 @@ h1, h2, h3 { font-family: var(--font-title); margin: 0; }
 
 #connexion { position: fixed; inset: 0; z-index: 30; background: var(--panel); display: flex; align-items: center; justify-content: center; padding: 16px; }
 #connexion .boite { width: 100%; max-width: 420px; }
+
+.msg.prive { border-left-style: dashed; border-left-color: var(--moi); background: var(--bg); font-style: italic; }
+.msg .etiquette-prive { font-size: 12px; font-weight: 600; font-style: normal; color: var(--moi); margin-bottom: 4px; }

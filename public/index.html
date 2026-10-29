@@ -13,12 +13,23 @@
 <body>
 
 <div id="connexion" hidden>
-  <div class="boite">
+  <div class="boite" id="etape-table" hidden>
     <h2>Table de jeu</h2>
     <div class="doux">Mot de passe de la table</div>
-    <input id="mdp" type="password" autocomplete="current-password" enterkeyhint="go">
+    <input id="mdp" type="password" autocomplete="off" enterkeyhint="go">
     <button class="btn" id="entrer">Entrer</button>
     <div id="err-connexion" class="erreur"></div>
+  </div>
+  <div class="boite" id="etape-compte" hidden>
+    <h2 id="titre-compte">Connexion</h2>
+    <div class="doux">Pseudo</div>
+    <input id="pseudo" type="text" maxlength="24" autocomplete="username" autocapitalize="off">
+    <div class="doux">Code de 8 caractères</div>
+    <input id="code" type="password" maxlength="8" autocomplete="current-password" autocapitalize="off" enterkeyhint="go">
+    <div id="aide-code" class="doux" hidden>Lettres et chiffres, sans autre règle. Garde-le : en cas d'oubli, l'organisateur peut le réinitialiser.</div>
+    <button class="btn" id="valider-compte">Me connecter</button>
+    <button class="btn sec" id="bascule-compte" type="button">Créer un compte</button>
+    <div id="err-compte" class="erreur"></div>
   </div>
 </div>
 
@@ -33,7 +44,7 @@
     <section class="panneau" id="p-texte" data-p="texte"><div class="contenu">
       <div class="compose">
         <div class="doux" id="qui-joue"></div>
-        <div class="ligne"><input id="texte" placeholder="Que fais-tu ?" enterkeyhint="send" autocomplete="off"><button class="btn" id="dire" type="button">Dire</button></div>
+        <div class="ligne"><input id="texte" placeholder="Que fais-tu ? (/dmj pour parler en privé au MJ)" enterkeyhint="send" autocomplete="off"><button class="btn" id="dire" type="button">Dire</button></div>
         <div class="ligne"><button class="btn sec" id="annuler" type="button">Annuler la dernière action</button></div>
         <div id="err" class="erreur"></div>
       </div>

@@ -317,6 +317,20 @@ const ACTIONS = {
     }
   },
 
+  chuchoter: {
+    description: "Envoie un message confidentiel à un seul joueur (ce que lui seul remarque, sait ou ressent). Les autres joueurs ne le voient pas.",
+    params: {
+      cible: { type: "string", description: "id du personnage destinataire", requis: true },
+      texte: { type: "string", description: "le message, en français, une ou deux phrases", requis: true }
+    },
+    executer(partie, p) {
+      perso(partie, p.cible);
+      if (!p.texte || !String(p.texte).trim()) refuse("message vide");
+      partie.texte.push({ qui: "mj", minute: partie.temps.minute, texte: String(p.texte).trim(), prive_a: p.cible });
+      return { envoye_a: p.cible };
+    }
+  },
+
   demander_jet: {
     description: "Demande un jet de dé à un joueur. Le joueur le lance et le serveur tire le dé. Tu ne lances jamais les dés toi-même: tu attends le résultat.",
     params: {

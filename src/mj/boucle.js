@@ -6,14 +6,16 @@ const MAX_TOURS = 6;      // appels au modèle par réplique
 const MAX_HISTORIQUE = 24; // dernières répliques envoyées au modèle
 
 function historique(partie) {
-  return partie.texte.slice(-MAX_HISTORIQUE).map((t) => t.qui === "mj"
-    ? { role: "mj", texte: t.texte }
-    : { role: "user", texte: t.texte });
+  return partie.texte.slice(-MAX_HISTORIQUE).map((t) => {
+    if (t.qui !== "mj") return { role: "user", texte: t.texte };
+    const dest = t.prive_a && partie.personnages[t.prive_a] ? partie.personnages[t.prive_a].base.nom : null;
+    return { role: "mj", texte: dest ? "[Message privé pour " + dest + ", les autres joueurs ne le voient pas] " + t.texte : t.texte };
+  });
 }
 
 // Fait jouer un tour au MJ. `entree` est ce que le joueur vient de dire ou le résultat d'un jet.
 // Modifie `partie` (journal, texte, état) et renvoie { texte }.
-async function tourMJ(partie, mj, entree) {
+async function tourMJ(partie, mj, entree, options) {
   const debut = Date.now();
   const messages = historique(partie);
   const intro = resume(partie);
@@ -39,7 +41,7 @@ async function tourMJ(partie, mj, entree) {
     messages.push({ role: "outil", reponses });
     if (attendJet) break; // on attend que le joueur lance le dé
   }
-  if (texteFinal) partie.texte.push({ qui: "mj", minute: partie.temps.minute, texte: texteFinal, duree_s: Math.round((Date.now() - debut) / 100) / 10 });
+  if (texteFinal) partie.texte.push({ qui: "mj", minute: partie.temps.minute, texte: texteFinal, duree_s: Math.round((Date.now() - debut) / 100) / 10, ...(options && options.prive_a ? { prive_a: options.prive_a } : {}) });
   return { texte: texteFinal };
 }
 
