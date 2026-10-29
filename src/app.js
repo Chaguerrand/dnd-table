@@ -43,7 +43,7 @@ function calculComplet(p) {
 }
 
 // moi = { cle, pseudo, role (droit sur la table: "organisateur" | "joueur"), superadmin }; pseudos = { cle: pseudo }
-function vue(partie, moi, pseudos, occupe) {
+function vue(partie, moi, pseudos, occupe, nomTable) {
   moi = moi || { cle: null, pseudo: null, role: null };
   pseudos = pseudos || {};
   const perso = {};
@@ -65,7 +65,7 @@ function vue(partie, moi, pseudos, occupe) {
   const proprio = (id) => partie.personnages[id] && partie.personnages[id].joueur;
   const voit = (e) => (!e.prive_a && !e.prive_de) || (e.prive_a && proprio(e.prive_a) === moi.cle) || (e.prive_de && proprio(e.prive_de) === moi.cle);
   const sortie = {
-    nom: partie.nom, rev: partie.rev, temps: partie.temps, quetes: { objectifs: partie.quetes.objectifs }, carte: partie.carte,
+    nom: nomTable || partie.nom, rev: partie.rev, temps: partie.temps, quetes: { objectifs: partie.quetes.objectifs }, carte: partie.carte,
     jets_en_attente: partie.jets_en_attente, personnages: perso,
     mj_occupe: occupe ? (occupe.perso === "prive" ? { perso: "prive", nom: "" } : { perso: occupe.perso, nom: occupe.nom }) : null,
     texte: partie.texte.filter(voit).slice(-60),
@@ -189,7 +189,7 @@ function creerApp({ store, mj, env }) {
   };
   app.use(["/api/partie", "/api/dire", "/api/jets", "/api/suite", "/api/sauvegarde", "/api/annuler", "/api/action", "/api/organisateur/attribuer"], avecTable);
 
-  const vuePour = async (req) => vue(await req.gestion.lire(), req.moi, await pseudos(), occupes.get(req.table.id));
+  const vuePour = async (req) => vue(await req.gestion.lire(), req.moi, await pseudos(), occupes.get(req.table.id), req.table.nom);
   const verifierProprio = (partie, id, req) => {
     const p = partie.personnages[id];
     if (!p) throw erreur("personnage inconnu", 400);
@@ -291,6 +291,27 @@ function creerApp({ store, mj, env }) {
     await tables.definirOrganisateur(req.params.id, cible ? cible.cle : null);
     res.json({ ok: true });
   }));
+  // Renommer: organisateur de la table ou superadmin.
+  app.post("/api/tables/:id/renommer", enveloppe(async (req, res) => {
+    await tableDeRoute(req, true);
+    const t = await tables.renommer(req.params.id, req.body && req.body.nom);
+    res.json({ id: t.id, nom: t.nom });
+  }));
+  // Suggestions de noms tirées de la quête en cours (objectifs) et du récit public. Rien de privé n'est transmis au modèle.
+  app.post("/api/tables/:id/suggestions", enveloppe(async (req, res) => {
+    const { t } = await tableDeRoute(req, true);
+    if (!mj) throw erreur("le MJ n'est pas configuré (clé Gemini manquante)", 503);
+    const partie = await tables.gestion(t.id).lire();
+    const objectifs = partie.quetes.objectifs.map((o) => o.texte);
+    const recit = partie.texte.filter((e) => !e.prive_a && !e.prive_de && e.qui === "mj").slice(-6).map((e) => e.texte);
+    if (!objectifs.length && !recit.length) throw erreur("Pas encore de matière : la table n'a ni objectif de quête ni récit. Les suggestions viendront avec la quête.", 409);
+    const consigne = "Nom actuel de la table: " + t.nom + "\nObjectifs de la quête: " + (objectifs.join(" | ") || "aucun") + "\nDébut du récit: " + (recit.join(" | ") || "aucun") +
+      "\n\nPropose 5 noms courts (2 à 5 mots) pour cette table de jeu de rôle, en français, évocateurs de la quête. Un nom par ligne, sans numéro, sans guillemets, sans commentaire.";
+    const rep = await mj.generer({ systeme: "Tu proposes des titres de quête pour une table de Donjons et Dragons. Tu réponds uniquement par la liste demandée.", messages: [{ role: "user", texte: consigne }], outils: [] });
+    const noms = [...new Set(String(rep.texte || "").split("\n").map((l) => l.replace(/^[\s\-*\d.)]+/, "").replace(/["«»]/g, "").trim()).filter((l) => l.length >= 2 && l.length <= 60))].slice(0, 5);
+    if (!noms.length) throw erreur("Le MJ n'a proposé aucun nom exploitable, réessaie.", 502);
+    res.json({ noms });
+  }));
   app.post("/api/tables/:id/inviter", enveloppe(async (req, res) => {
     await tableDeRoute(req, true);
     const cible = await trouverCompte(req.body && req.body.pseudo);
@@ -337,7 +358,7 @@ function creerApp({ store, mj, env }) {
     const occupe = occupes.get(req.table.id);
     const occ = occupe ? occupe.perso : "";
     if (req.query.depuis !== undefined && Number(req.query.depuis) === partie.rev && (req.query.occ || "") === occ) return res.json({ inchange: true });
-    res.json(vue(partie, req.moi, await pseudos(), occupe));
+    res.json(vue(partie, req.moi, await pseudos(), occupe, req.table.nom));
   }));
 
   app.get("/api/sorts", (req, res) => res.json(A.SORTS));

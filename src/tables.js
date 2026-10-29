@@ -107,6 +107,17 @@ function creerTables(store) {
         return t;
       });
     },
+    async renommer(id, nom) {
+      await assurer();
+      const n = String(nom || "").trim().replace(/\s+/g, " ");
+      if (n.length < 2 || n.length > 60) throw erreur("Le nom de la table doit faire 2 à 60 caractères.");
+      return reg.modifier((d) => {
+        const t = d.tables[id];
+        if (!t) throw erreur("table inconnue", 404);
+        t.nom = n;
+        return t;
+      });
+    },
     async inviter(id, cle) {
       await assurer();
       return reg.modifier((d) => {

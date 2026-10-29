@@ -112,6 +112,7 @@ function appliquerMise() {
 function afficher(p) {
   etat.partie = p;
   $("connexion").hidden = true; $("app").hidden = false;
+  $("titre").textContent = p.nom || "Table de jeu";
   appliquerMise();
   rendreTexte(); rendreCarte(); rendreFiche(); rendreInventaire(); rendreQuetes();
   if (etat.reglagesOuverts) rendreReglages();
@@ -498,7 +499,10 @@ function rendreReglages() {
   let tableBloc = "";
   if (orga && tcur) {
     const membres = (tcur.membres || []).map((m) => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>' + echapper(m) + '</b><button type="button" class="btn sec" data-t="retirer" data-v="' + echapper(m) + '">Retirer</button></div>').join("");
-    tableBloc = '<div class="boite"><h2>Table : ' + echapper(tcur.nom) + '</h2><div class="doux">Joueurs invités (l\'accès se fait sur invitation de pseudo)</div>' + (membres || '<div class="doux">Personne pour l\'instant.</div>') +
+    const sugg = (etat.suggestions || []).map((n) => '<button type="button" class="btn sec" data-t="appliquer-nom" data-v="' + echapper(n) + '">' + echapper(n) + "</button>").join("");
+    tableBloc = '<div class="boite"><h2>Table : ' + echapper(tcur.nom) + '</h2><div class="doux">Nom de la table</div><input id="nom-table-r" type="text" maxlength="60" autocomplete="off" value="' + echapper(tcur.nom) + '">' +
+      '<button type="button" class="btn" data-t="renommer">Renommer</button><button type="button" class="btn sec" data-t="suggestions">Suggérer des noms selon la quête</button>' + sugg +
+      '<div class="doux">Joueurs invités (l\'accès se fait sur invitation de pseudo)</div>' + (membres || '<div class="doux">Personne pour l\'instant.</div>') +
       '<input id="inviter-pseudo" type="text" maxlength="24" autocomplete="off" autocapitalize="off" placeholder="Pseudo à inviter"><button type="button" class="btn" data-t="inviter">Inviter</button>' +
       (moi.superadmin ? '<div class="doux">Organisateur de la table' + (tcur.organisateur ? " (actuellement " + echapper(tcur.organisateur) + ")" : "") + '. Laisse vide pour reprendre la main.</div><input id="orga-pseudo" type="text" maxlength="24" autocomplete="off" autocapitalize="off" placeholder="Pseudo de l\'organisateur"><button type="button" class="btn sec" data-t="organisateur">Désigner l\'organisateur</button>' : "") + "</div>";
   }
@@ -689,6 +693,16 @@ document.addEventListener("click", async (ev) => {
       await api("/api/tables/" + v + "/rejoindre", { perso: $("choix-" + v).value });
       await entrerTable(v);
     }
+    else if (a === "renommer") {
+      const r = await api("/api/tables/" + etat.tableId + "/renommer", { nom: $("nom-table-r").value });
+      etat.suggestions = []; etat.message = "Table renommée : " + r.nom + "."; etat.partie.nom = r.nom; $("titre").textContent = r.nom; await rafraichir();
+    }
+    else if (a === "suggestions") {
+      el.disabled = true; el.textContent = "Le MJ réfléchit...";
+      try { const r = await api("/api/tables/" + etat.tableId + "/suggestions", {}); etat.suggestions = r.noms; }
+      finally { rendreReglages(); }
+    }
+    else if (a === "appliquer-nom") { $("nom-table-r").value = v; }
     else if (a === "inviter") {
       await api("/api/tables/" + etat.tableId + "/inviter", { pseudo: $("inviter-pseudo").value });
       etat.message = "Invitation envoyée."; await rafraichir();

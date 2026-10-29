@@ -429,3 +429,36 @@ test("résultats critiques: la ligne du jet les nomme et le MJ a la consigne", a
   assert.match(SYSTEME, /1 naturel/);
   assert.match(SYSTEME, /pas de conséquence durable/);
 });
+
+test("tables: renommer (organisateur et superadmin) et suggestions sans fuite du privé", async () => {
+  const vus = [];
+  const mj = { nom: "faux", async generer(x) { vus.push(JSON.stringify(x.messages)); return { texte: "1. La Mine Oubliée\n- Les Échos du Gouffre\n« Rouille et Sang »", appels: [], parts: [] }; } };
+  const s = await demarrer(mj, {}, { sansCompte: true });
+  const creer = async (pseudo) => {
+    const r = await fetch(s.base + "/api/compte/creer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pseudo, code: "Abcd1234" }) });
+    const c = r.headers.getSetCookie().map((x) => x.split(";")[0]).join("; ");
+    return { post: (u, b) => fetch(s.base + u, { method: "POST", headers: { "content-type": "application/json", cookie: c }, body: JSON.stringify(b || {}) }), get: (u, h) => fetch(s.base + u, { headers: { cookie: c, ...(h || {}) } }) };
+  };
+  try {
+    const admin = await creer("Admin"), eve = await creer("Eve"), max = await creer("Max");
+    const t = await (await admin.post("/api/tables", { nom: "Table test" })).json();
+    await admin.post("/api/tables/" + t.id + "/inviter", { pseudo: "Eve" });
+    await admin.post("/api/tables/" + t.id + "/inviter", { pseudo: "Max" });
+    await admin.post("/api/tables/" + t.id + "/organisateur", { pseudo: "Eve" });
+    assert.equal((await max.post("/api/tables/" + t.id + "/renommer", { nom: "Piraté" })).status, 403);
+    assert.equal((await eve.post("/api/tables/" + t.id + "/renommer", { nom: "x" })).status, 400);
+    assert.equal((await eve.post("/api/tables/" + t.id + "/renommer", { nom: "  Les   mines  de Karn " })).status, 200);
+    const liste = await (await admin.get("/api/tables")).json();
+    assert.equal(liste.find((x) => x.id === t.id).nom, "Les mines de Karn");
+    assert.equal((await (await max.get("/api/partie", { "x-table": t.id })).json()).nom, "Les mines de Karn");
+    // sans objectif ni récit: pas de matière
+    assert.equal((await eve.post("/api/tables/" + t.id + "/suggestions")).status, 409);
+    // avec un objectif et un message privé: le privé ne part pas au modèle
+    await admin.post("/api/action?table=" + t.id, { action: "ajouter_objectif", params: { texte: "Retrouver la forge perdue" } });
+    const r = await eve.post("/api/tables/" + t.id + "/suggestions");
+    assert.equal(r.status, 200);
+    assert.deepEqual((await r.json()).noms, ["La Mine Oubliée", "Les Échos du Gouffre", "Rouille et Sang"]);
+    assert.match(vus[0], /forge perdue/);
+    assert.equal((await max.post("/api/tables/" + t.id + "/suggestions")).status, 403);
+  } finally { s.fermer(); }
+});
