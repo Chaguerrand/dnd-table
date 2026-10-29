@@ -48,6 +48,7 @@ test("flux complet: création, MJ demande un jet, joueur lance, MJ raconte, annu
 
     let r = await (await s.post("/api/dire", { perso: "korga", texte: "Je grimpe la falaise" })).json();
     assert.match(r.texte, /falaise/);
+    assert.equal(typeof r.partie.texte.at(-1).duree_s, "number");
     assert.equal(r.partie.jets_en_attente.length, 1);
 
     // tant qu'un jet est en attente, on ne peut pas parler

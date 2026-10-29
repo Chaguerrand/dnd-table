@@ -14,6 +14,7 @@ function historique(partie) {
 // Fait jouer un tour au MJ. `entree` est ce que le joueur vient de dire ou le résultat d'un jet.
 // Modifie `partie` (journal, texte, état) et renvoie { texte }.
 async function tourMJ(partie, mj, entree) {
+  const debut = Date.now();
   const messages = historique(partie);
   const intro = resume(partie);
   const outils = A.declarationsOutils();
@@ -38,7 +39,7 @@ async function tourMJ(partie, mj, entree) {
     messages.push({ role: "outil", reponses });
     if (attendJet) break; // on attend que le joueur lance le dé
   }
-  if (texteFinal) partie.texte.push({ qui: "mj", minute: partie.temps.minute, texte: texteFinal });
+  if (texteFinal) partie.texte.push({ qui: "mj", minute: partie.temps.minute, texte: texteFinal, duree_s: Math.round((Date.now() - debut) / 100) / 10 });
   return { texte: texteFinal };
 }
 
