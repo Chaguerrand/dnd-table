@@ -61,6 +61,14 @@ async function appelerModele(f, cle, nom, corps, essais) {
 }
 
 // modele: modèle principal; secours: autres modèles essayés si le principal est surchargé.
+// Certains modèles laissent fuiter leur raisonnement (en anglais) dans le texte: on coupe à la première trace.
+const MARQUEURS_FUITE = [/dynamic_thought/i, /Key framing/i, /\n\s*Wait[,:]/, /\n\s*Let'?s (call|check|see|write|do)/i, /\n\s*Parameters for/i, /\n\s*\d+\.\s+(Short|Prompt|Narrative)\b/i, /\n\s*(Okay|Ok),? (so|let)/i, /\n\s*(So|Now),? (I|the|let)\b/];
+function nettoyer(texte) {
+  let fin = texte.length;
+  for (const m of MARQUEURS_FUITE) { const r = m.exec(texte); if (r && r.index < fin) fin = r.index; }
+  return texte.slice(0, fin).trim();
+}
+
 function creerGemini({ cle, modele, secours, fetchFn }) {
   const f = fetchFn || fetch;
   const chaine = [modele || "gemini-2.5-flash", ...(secours || [])];
@@ -81,7 +89,7 @@ function creerGemini({ cle, modele, secours, fetchFn }) {
       if (!j) throw derniere || new Error("Gemini indisponible");
       const cand = j.candidates && j.candidates[0];
       const parts = (cand && cand.content && cand.content.parts) || [];
-      const texte = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
+      const texte = nettoyer(parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim());
       const appels = parts.filter((p) => p.functionCall).map((p) => ({ nom: p.functionCall.name, args: p.functionCall.args || {} }));
       if (!texte && !appels.length) {
         const raison = (cand && cand.finishReason) || (j.promptFeedback && j.promptFeedback.blockReason) || "inconnue";
@@ -93,4 +101,4 @@ function creerGemini({ cle, modele, secours, fetchFn }) {
   };
 }
 
-module.exports = { creerGemini, schemaOutils, versGemini };
+module.exports = { nettoyer, creerGemini, schemaOutils, versGemini };

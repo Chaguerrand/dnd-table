@@ -6,7 +6,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { creerApp } = require("../src/app");
 const { creerFichier } = require("../src/store/file");
-const { creerGemini, versGemini, schemaOutils } = require("../src/mj/gemini");
+const { creerGemini, versGemini, schemaOutils, nettoyer } = require("../src/mj/gemini");
 const A = require("../src/engine/actions");
 
 const stats = { sol: 16, per: 12, end: 14, cha: 10, int: 10, agi: 10, lot: 10, zen: 8 };
@@ -130,4 +130,11 @@ test("Gemini: conversion des outils et des messages, lecture de la réponse", as
   assert.equal(requete.opt.headers["x-goog-api-key"], "K");
   const e = creerGemini({ cle: "K", fetchFn: async () => ({ ok: false, status: 400, text: async () => JSON.stringify({ error: { message: "quota" } }) }) });
   await assert.rejects(e.generer({ systeme: "s", messages: [{ role: "user", texte: "x" }], outils: [] }), /quota/);
+});
+
+test("nettoyage: le raisonnement qui fuite est coupé, le récit intact", () => {
+  const fuite = "Korga se plaque contre le mur.\n\nVeux-tu rester caché ? dynamic_thoughtKey framing:\n1. Short, vivid.\nWait, let's call demander_jet!";
+  assert.equal(nettoyer(fuite), "Korga se plaque contre le mur.\n\nVeux-tu rester caché ?");
+  assert.equal(nettoyer("Une porte. Wait, c'est ouverte."), "Une porte. Wait, c'est ouverte.");
+  assert.equal(nettoyer("Récit.\nWait, I should call it."), "Récit.");
 });
