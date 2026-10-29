@@ -181,7 +181,7 @@ test("objectifs et journal de quête", () => {
 
 test("déclarations d'outils: une par action, schéma complet", () => {
   const d = A.declarationsOutils();
-  assert.equal(d.length, 17);
+  assert.equal(d.length, 18);
   assert.ok(d.every((x) => x.nom && x.description && x.parametres));
 });
 
@@ -230,4 +230,21 @@ test("reprise des anciennes données: les pièces en objets deviennent de la mon
   assert.ok(!inv.objets.some((o) => /Pièces/.test(o.nom)));
   assert.equal(Mn.harmoniser(p), 0); // idempotent
   assert.equal(Mn.texte(inv), "10 po 2 pa 3 pc");
+});
+
+test("combat: le temps n'avance pas pendant le combat, il passe à la fin selon les tours", () => {
+  const p = creer();
+  const m0 = p.temps.minute;
+  assert.equal(A.appliquer(p, "definir_combat", { actif: false, tours: 3 }, "mj").ok, false); // pas de combat en cours
+  assert.equal(A.appliquer(p, "definir_combat", { actif: true }, "mj").ok, true);
+  assert.equal(A.appliquer(p, "definir_combat", { actif: true }, "mj").ok, false);
+  assert.equal(p.temps.minute, m0);
+  assert.equal(A.appliquer(p, "definir_combat", { actif: false }, "mj").ok, false); // tours obligatoire
+  const r = A.appliquer(p, "definir_combat", { actif: false, tours: 25 }, "mj");
+  assert.equal(r.ok, true);
+  assert.equal(p.temps.minute, m0 + 3); // 25 tours de 6 s: 3 minutes
+  assert.equal(p.combat, undefined);
+  A.appliquer(p, "definir_combat", { actif: true }, "mj");
+  A.appliquer(p, "definir_combat", { actif: false, tours: 2 }, "mj");
+  assert.equal(p.temps.minute, m0 + 4); // minimum 1 minute
 });

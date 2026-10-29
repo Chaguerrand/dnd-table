@@ -12,6 +12,17 @@ const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-
 // Clé de comparaison d'un nom d'objet: sans articles ni "de", au singulier ("Potions de soin" = "Potion de soin").
 const MOTS_VIDES = new Set(["le", "la", "les", "un", "une", "des", "l", "de", "du", "d"]);
 const cleObjet = (s) => norm(s).replace(/['’]/g, " ").split(/\s+/).filter((w) => w && !MOTS_VIDES.has(w)).map((w) => (w.length > 3 ? w.replace(/[sx]$/, "") : w)).join(" ");
+// Fait passer des minutes et expire les effets de durée en temps.
+function passerTemps(partie, minutes) {
+  partie.temps.minute += minutes;
+  let expires = 0;
+  for (const c of Object.values(partie.personnages)) {
+    const avant = c.etat.effets.length;
+    c.etat.effets = c.etat.effets.filter((e) => !(e.duree.type === "temps" && e.duree.fin_minute <= partie.temps.minute));
+    expires += avant - c.etat.effets.length;
+  }
+  return { minute: partie.temps.minute, effets_expires: expires };
+}
 const MAX_ANNULABLES = 20;
 
 class ErreurAction extends Error {}
@@ -308,18 +319,32 @@ const ACTIONS = {
   },
 
   avancer_temps: {
-    description: "Fait passer du temps (en minutes). Les effets de durée en temps expirent.",
+    description: "Fait passer du temps (en minutes). Les effets de durée en temps expirent. Pendant un combat, n'utilise pas cet outil: le temps se règle à la fin avec definir_combat.",
     params: { minutes: { type: "integer", description: "minutes écoulées (1 à 1440)", requis: true } },
     executer(partie, p) {
       if (!Number.isInteger(p.minutes) || p.minutes < 1 || p.minutes > 1440) refuse("minutes invalides");
-      partie.temps.minute += p.minutes;
-      let expires = 0;
-      for (const c of Object.values(partie.personnages)) {
-        const avant = c.etat.effets.length;
-        c.etat.effets = c.etat.effets.filter((e) => !(e.duree.type === "temps" && e.duree.fin_minute <= partie.temps.minute));
-        expires += avant - c.etat.effets.length;
+      return passerTemps(partie, p.minutes);
+    }
+  },
+
+  definir_combat: {
+    description: "Ouvre ou ferme un combat. Un tour de combat dure 6 secondes: pendant le combat le temps n'avance pas (pas d'avancer_temps). À la fermeture, donne le nombre de tours écoulés: le temps passe de 1 minute par 10 tours (minimum 1 minute).",
+    params: {
+      actif: { type: "boolean", description: "true: le combat commence; false: il se termine", requis: true },
+      tours: { type: "integer", description: "obligatoire quand actif = false: nombre de tours de combat écoulés" }
+    },
+    executer(partie, p) {
+      if (typeof p.actif !== "boolean") refuse("actif doit être vrai ou faux");
+      if (p.actif) {
+        if (partie.combat) refuse("un combat est déjà en cours");
+        partie.combat = { debut: partie.temps.minute, repliques: 0 };
+        return { combat: true };
       }
-      return { minute: partie.temps.minute, effets_expires: expires };
+      if (!partie.combat) refuse("aucun combat en cours");
+      if (!Number.isInteger(p.tours) || p.tours < 1) refuse("tours obligatoire (entier, 1 ou plus) pour terminer un combat");
+      const minutes = Math.max(1, Math.ceil(p.tours / 10));
+      delete partie.combat;
+      return { combat: false, ...passerTemps(partie, minutes) };
     }
   },
 

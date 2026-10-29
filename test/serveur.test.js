@@ -123,7 +123,7 @@ test("modifications simultanées: pas de perte (verrou)", async () => {
 
 test("Gemini: conversion des outils et des messages, lecture de la réponse", async () => {
   const outils = schemaOutils(A.declarationsOutils())[0].functionDeclarations;
-  assert.equal(outils.length, 17);
+  assert.equal(outils.length, 18);
   const d = outils.find((o) => o.name === "demander_jet");
   assert.deepEqual(d.parameters.required.sort(), ["cible", "nom", "type"]);
   const m = versGemini([{ role: "user", texte: "a" }, { role: "mj", texte: "b", appels: [{ nom: "repos", args: { type: "court" } }] }, { role: "outil", reponses: [{ nom: "repos", contenu: { ok: true } }] }]);
@@ -475,4 +475,19 @@ test("temps: l'état affiche le jour et l'heure, et rappelle au MJ de faire avan
   assert.equal(partie.temps.minute, 490);
   assert.equal(partie.temps.tours_sans_avance, 0);
   assert.doesNotMatch(resume(partie), /RAPPEL TEMPS/);
+});
+
+test("combat: pas de rappel de temps pendant un combat, rappel de fin si trop long", async () => {
+  const { resume } = require("../src/mj/prompt");
+  const { tourMJ } = require("../src/mj/boucle");
+  const partie = nouvellePartie("t");
+  importerPersonnage(partie, { id: "korga", base: KORGA.base, etat: KORGA.etat });
+  A.appliquer(partie, "definir_combat", { actif: true }, "mj");
+  const rien = { async generer() { return { texte: "Tu frappes.", appels: [], parts: [] }; } };
+  for (let i = 0; i < 5; i++) await tourMJ(partie, rien, "[Korga] j'attaque");
+  assert.equal(partie.temps.tours_sans_avance, 0);
+  assert.match(resume(partie), /COMBAT EN COURS depuis 5/);
+  assert.doesNotMatch(resume(partie), /RAPPEL TEMPS/);
+  partie.combat.repliques = 40;
+  assert.match(resume(partie), /RAPPEL COMBAT/);
 });

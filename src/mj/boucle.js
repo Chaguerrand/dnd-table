@@ -43,7 +43,9 @@ async function tourMJ(partie, mj, entree, options) {
     if (attendJet) break; // on attend que le joueur lance le dé
   }
   // compteur pour rappeler au MJ de faire avancer l'heure
-  partie.temps.tours_sans_avance = partie.temps.minute === minuteAvant ? (partie.temps.tours_sans_avance || 0) + 1 : 0;
+  // (en combat, le temps se règle à la fin du combat: pas de compteur)
+  if (partie.combat) { partie.combat.repliques = (partie.combat.repliques || 0) + 1; partie.temps.tours_sans_avance = 0; }
+  else partie.temps.tours_sans_avance = partie.temps.minute === minuteAvant ? (partie.temps.tours_sans_avance || 0) + 1 : 0;
   if (texteFinal) partie.texte.push({ qui: "mj", minute: partie.temps.minute, texte: texteFinal, duree_s: Math.round((Date.now() - debut) / 100) / 10, ...(options && options.prive_a ? { prive_a: options.prive_a } : {}) });
   return { texte: texteFinal };
 }
