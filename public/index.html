@@ -92,7 +92,7 @@ function afficher(p) {
     const c = p.personnages[id], s = c.calcul.stats;
     return '<div class="carte"><b>' + echapper(c.base.nom) + '</b> <span class="petit">' + echapper(c.base.race + " " + c.base.classe + " niv. " + c.base.niveau) + '</span>' +
       '<div class="petit">PV ' + c.etat.pv + "/" + c.calcul.pv_max + " - vitesse " + c.calcul.vitesse_m + " m - charge " + c.calcul.charge.etat + " (" + c.calcul.charge.poids + " kg)</div>" +
-      '<div class="stats">' + Object.keys(NOMS).map((k) => "<div>" + NOMS[k].slice(0, 4) + "<b>" + s[k] + "</b></div>").join("") + "</div>" +
+      '<div class="stats">' + Object.keys(NOMS).map((k) => "<div>" + NOMS[k].slice(0, 3) + "<b>" + s[k] + "</b></div>").join("") + "</div>" +
       (c.etat.effets.length ? '<div class="petit">Effets: ' + c.etat.effets.map((e) => echapper(e.champ + " " + (e.valeur > 0 ? "+" : "") + e.valeur + " (" + e.source + ")")).join(", ") + "</div>" : "") +
       '<div class="petit">Objets: ' + (c.etat.inventaire.objets.map((o) => echapper(o.quantite + "x " + o.nom)).join(", ") || "rien") + " - " + c.etat.inventaire.po + " po</div></div>";
   }).join("");
