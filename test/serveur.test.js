@@ -139,3 +139,31 @@ test("nettoyage: le raisonnement qui fuite est coupé, le récit intact", () => 
   assert.equal(nettoyer("Une porte. Wait, c'est ouverte."), "Une porte. Wait, c'est ouverte.");
   assert.equal(nettoyer("Récit.\nWait, I should call it."), "Récit.");
 });
+
+test("jet en deux temps puis suite, et sauvegarde export/import", async () => {
+  const mj = fauxMJ([
+    { texte: "Une falaise.", appels: [{ nom: "demander_jet", args: { cible: "korga", type: "competence", nom: "Athlétisme", dd: 10, raison: "grimper" } }] },
+    { texte: "Tu grimpes.", appels: [] }
+  ]);
+  const s = await demarrer(mj);
+  try {
+    await s.post("/api/personnages", KORGA);
+    let r = await (await s.post("/api/dire", { perso: "korga", texte: "je grimpe" })).json();
+    const jetId = r.partie.jets_en_attente[0].id;
+    r = await (await s.post("/api/jets/" + jetId + "/lancer", { perso: "korga", sans_mj: true })).json();
+    assert.equal(r.partie.jets_en_attente.length, 0);
+    assert.equal(r.partie.texte.at(-1).qui, "joueur");
+    assert.ok(r.resultat.tirages.length >= 1);
+    assert.ok(r.partie.personnages.korga.calcul.competences["Athlétisme"].maitrise);
+    r = await (await s.post("/api/suite", {})).json();
+    assert.equal(r.partie.texte.at(-1).texte, "Tu grimpes.");
+    assert.equal((await s.post("/api/suite", {})).status, 409);
+    const save = await (await s.get("/api/sauvegarde")).json();
+    assert.equal(save.version, 1);
+    assert.equal((await s.post("/api/sauvegarde", { truc: 1 })).status, 400);
+    const ok = await s.post("/api/sauvegarde", save);
+    assert.equal(ok.status, 200);
+    const p = await (await s.get("/api/partie")).json();
+    assert.equal(p.texte.length, r.partie.texte.length);
+  } finally { s.fermer(); }
+});

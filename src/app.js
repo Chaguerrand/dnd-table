@@ -5,6 +5,7 @@ const path = require("node:path");
 const A = require("./engine/actions");
 const P = require("./engine/partie");
 const R = require("./engine/regles");
+const C = require("./engine/constantes");
 const { tourMJ } = require("./mj/boucle");
 const { creerGestionnaire } = require("./store");
 
@@ -33,6 +34,12 @@ function vue(partie) {
       calcul: {
         stats: Object.fromEntries(["sol", "per", "end", "cha", "int", "agi", "lot", "zen"].map((k) => [k, R.stat(p, k)])),
         vitesse_m: R.vitesse(p), pv_max: R.pvMax(p), charge: R.charge(p),
+        modificateurs: Object.fromEntries(["sol", "per", "end", "cha", "int", "agi", "lot", "zen"].map((k) => [k, R.modStat(p, k)])),
+        maitrise: R.bonusMaitrise(p.base.niveau),
+        armure: R.champ(p, "armure", 10 + R.modStat(p, "agi") + (p.etat.inventaire.objets || []).filter((o) => o.equipe).reduce((s, o) => s + ((o.stats && o.stats.armure) || 0), 0)),
+        initiative: R.champ(p, "initiative", R.modStat(p, "agi")),
+        competences: Object.fromEntries(Object.keys(C.COMPETENCES).map((n) => [n, { stat: C.COMPETENCES[n], bonus: R.modificateurJet(p, "competence", n), maitrise: R.maitrise(p, n) }])),
+        sauvegardes: Object.fromEntries(C.STATS.map((k) => [k, R.modificateurJet(p, "sauvegarde", k)])),
         pouvoirs: R.pouvoirsDe(p).map((d) => ({ ...d, restant: d.max - (p.etat.pouvoirs_utilises[d.id] || 0) })),
         emplacements_max: R.emplacementsMax(p)
       }
@@ -52,7 +59,7 @@ function creerApp({ store, mj, env }) {
   const gestion = creerGestionnaire(store, "partie");
   const app = express();
   app.disable("x-powered-by");
-  app.use(express.json({ limit: "200kb" }));
+  app.use(express.json({ limit: "5mb" }));
 
   app.get("/sante", (req, res) => res.json({ ok: true, version: (env.RENDER_GIT_COMMIT || "local").slice(0, 7), mj: mj ? mj.nom : null, mot_de_passe: !!motDePasse }));
 
@@ -123,11 +130,38 @@ function creerApp({ store, mj, env }) {
         " = " + j.total + (j.dd != null ? " contre " + j.dd + (j.reussi ? " : réussite" : " : échec") : "") +
         (j.critique === "reussite" ? " (20 naturel)" : j.critique === "echec" ? " (1 naturel)" : "");
       partie.texte.push({ qui: "joueur", perso: partie.journal.at(-1).cible, minute: partie.temps.minute, texte: ligne, jet: j });
-      if (!mj) return { resultat: j, texte: "" };
+      if (!mj || (req.body && req.body.sans_mj)) return { resultat: j, texte: "" };
       const m = await tourMJ(partie, mj, ligne);
       return { resultat: j, texte: m.texte };
     });
     res.json({ ...sortie, partie: vue(await gestion.lire()) });
+  }));
+
+  // Le MJ reprend la main après un jet déjà enregistré (ou si sa réponse a échoué).
+  app.post("/api/suite", enveloppe(async (req, res) => {
+    if (!mj) return res.status(503).json({ erreur: "le MJ n'est pas configuré (clé Gemini manquante)" });
+    const sortie = await gestion.modifier(async (partie) => {
+      const dernier = partie.texte.at(-1);
+      if (!dernier || dernier.qui !== "joueur") throw Object.assign(new Error("rien à reprendre"), { status: 409 });
+      if (partie.jets_en_attente.length) throw Object.assign(new Error("un jet de dé est en attente: lancez-le d'abord"), { status: 409 });
+      return tourMJ(partie, mj, dernier.texte);
+    });
+    res.json({ ...sortie, partie: vue(await gestion.lire()) });
+  }));
+
+  // Sauvegarde complète de la partie (export / import).
+  app.get("/api/sauvegarde", enveloppe(async (req, res) => res.json(await gestion.lire())));
+  app.post("/api/sauvegarde", enveloppe(async (req, res) => {
+    const n = req.body;
+    const ok = n && typeof n === "object" && n.version === 1 && n.personnages && typeof n.personnages === "object" &&
+      Array.isArray(n.texte) && Array.isArray(n.journal) && Array.isArray(n.jets_en_attente) &&
+      n.carte && Array.isArray(n.carte.murs) && n.carte.jetons && n.quetes && Array.isArray(n.quetes.objectifs) && n.temps && Number.isFinite(n.temps.minute);
+    if (!ok) return res.status(400).json({ erreur: "ce fichier n'est pas une sauvegarde valide" });
+    await gestion.modifier((partie) => {
+      for (const k of Object.keys(partie)) delete partie[k];
+      Object.assign(partie, JSON.parse(JSON.stringify(n)));
+    });
+    res.json({ ok: true, partie: vue(await gestion.lire()) });
   }));
 
   app.post("/api/annuler", enveloppe(async (req, res) => {
