@@ -44,6 +44,20 @@ async function demarrer(mj, env, options) {
   return s;
 }
 
+test("le MJ demande un jet dans son texte sans l'outil: le serveur le relance", async () => {
+  const mj = fauxMJ([
+    { texte: "Tu glisses ta dague dans son flanc. Fais un jet de dégâts pour les dagues.", appels: [] },
+    { texte: "", appels: [{ nom: "demander_jet", args: { cible: "korga", type: "degats", nom: "dagues", de: "1d4+1" } }] }
+  ]);
+  const s = await demarrer(mj);
+  try {
+    assert.equal((await s.post("/api/personnages", KORGA)).status, 200);
+    const r = await (await s.post("/api/dire", { perso: "korga", texte: "Je frappe" })).json();
+    assert.equal(r.partie.jets_en_attente.length, 1);
+    assert.equal(r.partie.jets_en_attente[0].type, "degats");
+  } finally { s.fermer(); }
+});
+
 test("flux complet: création, MJ demande un jet, joueur lance, MJ raconte, annulation", async () => {
   const mj = fauxMJ([
     { texte: "Une falaise se dresse devant vous.", appels: [{ nom: "demander_jet", args: { cible: "korga", type: "competence", nom: "Athlétisme", dd: 10, raison: "grimper" } }] },

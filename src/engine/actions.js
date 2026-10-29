@@ -401,14 +401,19 @@ const ACTIONS = {
       const types = ["competence", "stat", "sauvegarde", "attaque", "degats", "libre"];
       if (!types.includes(p.type)) refuse("type de jet inconnu: " + p.type);
       R.modificateurJet(c, p.type, p.nom, p.bonus); // valide le nom
-      const de = p.de || (["degats", "libre"].includes(p.type) ? null : "d20");
+      // tolérant: "1d4+2" ou "d4 +2" deviennent 1d4 avec un bonus de 2; dégâts sans dés: 1d6 par défaut
+      let de = p.de ? String(p.de).toLowerCase().replace(/\s+/g, "") : (["degats", "libre"].includes(p.type) ? null : "d20");
+      let bonus = p.bonus || 0;
+      if (!de && p.type === "degats") de = "1d6";
       if (!de) refuse("il faut préciser les dés (ex: 1d8)");
+      const m = /^(\d*d\d+)([+-]\d+)?$/.exec(de);
+      if (m) { de = m[1]; if (m[2]) bonus += parseInt(m[2], 10); }
       D.lancer(de); // valide l'expression (le résultat est jeté)
       if (partie.jets_en_attente.some((j) => j.cible === p.cible)) refuse("un jet est déjà en attente pour " + c.base.nom);
       const jet = {
         id: prochainId("jet", partie.jets_en_attente.map((x) => x.id).concat(partie.journal.map((e) => (e.resultat && e.resultat.jet_id) || ""))),
         cible: p.cible, type: p.type, nom: p.nom, dd: p.dd == null ? null : p.dd,
-        avantage: p.avantage || "normal", de, bonus: p.bonus || 0, raison: p.raison || ""
+        avantage: p.avantage || "normal", de, bonus, raison: p.raison || ""
       };
       partie.jets_en_attente.push(jet);
       return { jet_id: jet.id };

@@ -171,6 +171,19 @@ test("dégâts: 2d6 donne entre 2 et 12 et pas de d20", () => {
   assert.equal(res.tirages.length, 2);
 });
 
+test("dégâts tolérants: 1d4+2 et dés absents", () => {
+  const p = creer();
+  let r = A.appliquer(p, "demander_jet", { cible: "korga", type: "degats", nom: "dagues", de: "1d4+2" }, "mj");
+  assert.ok(r.ok, r.erreur);
+  let res = A.resoudreJet(p, r.resultat.jet_id, "korga").resultat;
+  assert.equal(res.de, "1d4");
+  assert.ok(res.total >= 3 && res.total <= 6);
+  r = A.appliquer(p, "demander_jet", { cible: "korga", type: "degats", nom: "dagues" }, "mj");
+  assert.ok(r.ok, r.erreur);
+  res = A.resoudreJet(p, r.resultat.jet_id, "korga").resultat;
+  assert.equal(res.de, "1d6");
+});
+
 test("objectifs et journal de quête", () => {
   const p = creer();
   const o = A.appliquer(p, "ajouter_objectif", { texte: "Trouver la clé" }, "mj");

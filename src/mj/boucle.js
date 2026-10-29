@@ -4,6 +4,8 @@ const { SYSTEME, resume } = require("./prompt");
 
 const MAX_TOURS = 6;      // appels au modèle par réplique
 const MAX_HISTORIQUE = 24; // dernières répliques envoyées au modèle
+// le texte du MJ demande un jet à lancer
+const DEMANDE_DE_JET = /\b(fais|faites|lance|lancez|lancer|jette|jetez)\b[^.\n]{0,40}\b(jet|dés?|dé)\b|\bjet de (dégâts|degats|attaque|sauvegarde)\b/i;
 
 function historique(partie) {
   return partie.texte.slice(-MAX_HISTORIQUE).map((t) => {
@@ -41,6 +43,13 @@ async function tourMJ(partie, mj, entree, options) {
     }
     messages.push({ role: "outil", reponses });
     if (attendJet) break; // on attend que le joueur lance le dé
+  }
+  // filet de sécurité: le MJ demande un jet dans son texte sans appeler l'outil, le joueur serait bloqué
+  if (texteFinal && !partie.jets_en_attente.length && DEMANDE_DE_JET.test(texteFinal)) {
+    messages.push({ role: "mj", texte: texteFinal });
+    messages.push({ role: "user", texte: "CORRECTION: ton récit demande un jet de dé mais tu n'as pas appelé l'outil demander_jet, donc le joueur ne peut pas lancer. Appelle demander_jet maintenant (type degats avec les dés de l'arme, ou attaque, competence...), sans réécrire le récit." });
+    const rep = await mj.generer({ systeme: SYSTEME, messages, outils });
+    for (const a of rep.appels) A.appliquer(partie, a.nom, a.args, "mj");
   }
   // compteur pour rappeler au MJ de faire avancer l'heure
   // (en combat, le temps se règle à la fin du combat: pas de compteur)
