@@ -58,6 +58,18 @@ test("le MJ demande un jet dans son texte sans l'outil: le serveur le relance", 
   } finally { s.fermer(); }
 });
 
+test("l'état envoyé au MJ décrit la carte et ses jetons", async () => {
+  const mj = fauxMJ([{ texte: "Rien.", appels: [] }]);
+  const s = await demarrer(mj);
+  try {
+    assert.equal((await s.post("/api/personnages", KORGA)).status, 200);
+    await s.post("/api/dire", { perso: "korga", texte: "Je regarde" });
+    const msg = JSON.stringify(mj.appels[0].messages);
+    assert.match(msg, /CARTE 20 colonnes x 15 lignes/);
+    assert.match(msg, /korga \(\d+,\d+\)/);
+  } finally { s.fermer(); }
+});
+
 test("flux complet: création, MJ demande un jet, joueur lance, MJ raconte, annulation", async () => {
   const mj = fauxMJ([
     { texte: "Une falaise se dresse devant vous.", appels: [{ nom: "demander_jet", args: { cible: "korga", type: "competence", nom: "Athlétisme", dd: 10, raison: "grimper" } }] },
