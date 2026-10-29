@@ -52,7 +52,7 @@ function ecrireLocal(cle, val) { try { localStorage.setItem(cle, val); } catch (
 const etat = {
   partie: null, perso: lireLocal("perso", ""), theme: lireLocal("theme", "commonwealth"), disposition: lireLocal("disposition", "auto"),
   onglet: lireLocal("onglet", "texte"), ficheOnglet: "base", ouvert: {}, filtre: "all", legende: true, jetEnCours: null, occupe: false,
-  sorts: null, serveur: { mot_de_passe: false, version: "" }, reglagesOuverts: false, ajout: false, message: ""
+  sorts: null, serveur: { version: "" }, reglagesOuverts: false, ajout: false, message: ""
 };
 etat.tableId = lireLocal("table", "");
 etat.tables = []; etat.biblio = []; etat.moiCompte = null; etat.messageAccueil = "";
@@ -75,7 +75,7 @@ async function api(url, corps) {
 let modeCompte = "connexion";
 function montrerConnexion(etape) {
   $("connexion").hidden = false; $("app").hidden = true; $("reglages").hidden = true; $("accueil").hidden = true; etat.reglagesOuverts = false;
-  $("etape-table").hidden = etape !== "table"; $("etape-compte").hidden = etape !== "compte"; $("etape-aucune").hidden = etape !== "aucune";
+  $("etape-compte").hidden = etape !== "compte"; $("etape-aucune").hidden = etape !== "aucune";
   majModeCompte();
 }
 function majModeCompte() {
@@ -595,13 +595,7 @@ document.addEventListener("change", async (ev) => {
   } catch (e) { etat.message = e.message; rendreReglages(); }
 });
 
-$("entrer").onclick = async () => {
-  $("err-connexion").textContent = "";
-  try { await api("/api/connexion", { mot_de_passe: $("mdp").value }); await demarrer(); }
-  catch (e) { if (e.message !== "connexion requise") $("err-connexion").textContent = e.message; }
-};
 $("deco-aucune").onclick = async () => { await api("/api/compte/deconnexion", {}).catch(() => {}); modeCompte = "connexion"; montrerConnexion("compte"); };
-$("mdp").addEventListener("keydown", (e) => { if (e.key === "Enter") $("entrer").click(); });
 $("valider-compte").onclick = async () => {
   $("err-compte").textContent = "";
   try {
@@ -725,6 +719,6 @@ document.addEventListener("click", async (ev) => {
 $("ouvrir-accueil").onclick = () => montrerAccueil();
 $("fermer-accueil").onclick = () => { $("accueil").hidden = true; $("app").hidden = false; };
 
-fetch("/sante").then((r) => r.json()).then((j) => { etat.serveur = { mot_de_passe: !!j.mot_de_passe, version: j.version }; $("version").textContent = "Version " + j.version; }).catch(() => {});
+fetch("/sante").then((r) => r.json()).then((j) => { etat.serveur = { version: j.version }; $("version").textContent = "Version " + j.version; }).catch(() => {});
 document.documentElement.setAttribute("data-theme", THEMES[etat.theme] ? etat.theme : "commonwealth");
 demarrer().catch(() => {});

@@ -15,7 +15,5 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: TABLE_PASSWORD
-        sync: false
       - key: SESSION_SECRET
         generateValue: true

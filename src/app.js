@@ -77,7 +77,6 @@ function vue(partie, moi, pseudos, occupe, nomTable) {
 
 function creerApp({ store, mj, env }) {
   const secret = env.SESSION_SECRET || "dev-secret-a-changer";
-  const motDePasse = env.TABLE_PASSWORD || null;
   const prod = env.NODE_ENV === "production";
   const comptes = creerComptes(store, env);
   const tables = creerTables(store);
@@ -113,25 +112,7 @@ function creerApp({ store, mj, env }) {
   const poseJoueur = (res, j, extra) => res.setHeader("Set-Cookie", [cookie("joueur", signer(j.cle, secret), 2592000)].concat(extra || []));
   const moiPublic = (j) => ({ pseudo: j.pseudo, role: j.role, superadmin: j.role === "superadmin" });
 
-  app.get("/sante", (req, res) => res.json({ ok: true, version: (env.RENDER_GIT_COMMIT || "local").slice(0, 7), mj: mj ? mj.nom : null, mot_de_passe: !!motDePasse }));
-
-  // Porte d'entrée de la table (mot de passe commun, optionnel).
-  app.post("/api/connexion", (req, res) => {
-    if (motDePasse) {
-      const a = Buffer.from(String((req.body && req.body.mot_de_passe) || ""));
-      const b = Buffer.from(motDePasse);
-      const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
-      if (!ok) return res.status(401).json({ erreur: "mot de passe incorrect" });
-    }
-    res.setHeader("Set-Cookie", cookie("table", signer("table", secret), 2592000));
-    res.json({ ok: true });
-  });
-
-  app.use("/api", (req, res, next) => {
-    if (!motDePasse) return next();
-    if (verifier(lireCookie(req, "table"), secret)) return next();
-    res.status(401).json({ erreur: "connexion requise", etape: "table" });
-  });
+  app.get("/sante", (req, res) => res.json({ ok: true, version: (env.RENDER_GIT_COMMIT || "local").slice(0, 7), mj: mj ? mj.nom : null }));
 
   // Comptes des joueurs.
   app.post("/api/compte/creer", enveloppe(async (req, res) => {

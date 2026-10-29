@@ -95,24 +95,19 @@ test("refus de l'outil renvoyé au MJ, sans changer l'état", async () => {
   } finally { s.fermer(); }
 });
 
-test("mot de passe: accès refusé puis accepté avec cookie signé", async () => {
-  const s = await demarrer(null, { TABLE_PASSWORD: "dragon", SESSION_SECRET: "abc" }, { sansCompte: true });
+test("compte requis: sans compte ou avec un cookie falsifié, accès refusé", async () => {
+  const s = await demarrer(null, { SESSION_SECRET: "abc" }, { sansCompte: true });
   try {
-    assert.equal((await s.get("/api/partie")).status, 401);
-    assert.equal((await s.post("/api/connexion", { mot_de_passe: "faux" })).status, 401);
-    const c = await s.post("/api/connexion", { mot_de_passe: "dragon" });
-    assert.equal(c.status, 200);
-    const cookie = c.headers.get("set-cookie").split(";")[0];
-    // la porte d'entrée ne suffit pas: il faut aussi un compte
-    const sansCompte = await s.get("/api/partie", { cookie });
-    assert.equal(sansCompte.status, 401);
-    assert.equal((await sansCompte.json()).etape, "compte");
-    assert.equal((await s.get("/api/partie", { cookie: cookie.slice(0, -2) + "zz" })).status, 401);
-    const cr = await s.post("/api/compte/creer", { pseudo: "Charlie", code: "Abcd1234" }, { cookie });
+    const r = await s.get("/api/partie");
+    assert.equal(r.status, 401);
+    assert.equal((await r.json()).etape, "compte");
+    assert.equal((await s.get("/api/partie", { cookie: "joueur=charlie.0000" })).status, 401);
+    const cr = await s.post("/api/compte/creer", { pseudo: "Charlie", code: "Abcd1234" });
     assert.equal(cr.status, 200);
-    const tous = cookie + "; " + cr.headers.getSetCookie().map((x) => x.split(";")[0]).join("; ");
-    assert.equal((await s.get("/api/partie", { cookie: tous })).status, 200);
-    assert.equal((await s.post("/api/dire", { perso: "x", texte: "a" }, { cookie: tous })).status, 503);
+    const cookie = cr.headers.getSetCookie().map((x) => x.split(";")[0]).join("; ");
+    assert.equal((await s.get("/api/partie", { cookie })).status, 200);
+    assert.equal((await s.get("/api/partie", { cookie: cookie.slice(0, -2) + "zz" })).status, 401);
+    assert.equal((await s.post("/api/dire", { perso: "x", texte: "a" }, { cookie })).status, 503);
   } finally { s.fermer(); }
 });
 
