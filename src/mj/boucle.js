@@ -25,6 +25,7 @@ async function tourMJ(partie, mj, entree, options) {
   if (!dernier || dernier.role !== "user") messages.push({ role: "user", texte: entree });
   messages[messages.length - 1] = { role: "user", texte: intro + "\n\n" + messages[messages.length - 1].texte };
 
+  const minuteAvant = partie.temps.minute;
   let texteFinal = "";
   for (let tour = 0; tour < MAX_TOURS; tour++) {
     const rep = await mj.generer({ systeme: SYSTEME, messages, outils });
@@ -41,6 +42,8 @@ async function tourMJ(partie, mj, entree, options) {
     messages.push({ role: "outil", reponses });
     if (attendJet) break; // on attend que le joueur lance le dé
   }
+  // compteur pour rappeler au MJ de faire avancer l'heure
+  partie.temps.tours_sans_avance = partie.temps.minute === minuteAvant ? (partie.temps.tours_sans_avance || 0) + 1 : 0;
   if (texteFinal) partie.texte.push({ qui: "mj", minute: partie.temps.minute, texte: texteFinal, duree_s: Math.round((Date.now() - debut) / 100) / 10, ...(options && options.prive_a ? { prive_a: options.prive_a } : {}) });
   return { texte: texteFinal };
 }

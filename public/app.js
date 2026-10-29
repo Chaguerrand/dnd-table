@@ -502,6 +502,7 @@ function rendreReglages() {
     const sugg = (etat.suggestions || []).map((n) => '<button type="button" class="btn sec" data-t="appliquer-nom" data-v="' + echapper(n) + '">' + echapper(n) + "</button>").join("");
     tableBloc = '<div class="boite"><h2>Table : ' + echapper(tcur.nom) + '</h2><div class="doux">Nom de la table</div><input id="nom-table-r" type="text" maxlength="60" autocomplete="off" value="' + echapper(tcur.nom) + '">' +
       '<button type="button" class="btn" data-t="renommer">Renommer</button><button type="button" class="btn sec" data-t="suggestions">Suggérer des noms selon la quête</button>' + sugg +
+      '<div class="doux">Repos du groupe (recharge les pouvoirs, fait passer l\'heure)</div><div style="display:flex;gap:8px"><button type="button" class="btn sec" style="flex:1" data-t="repos" data-v="court">Repos court (1 h)</button><button type="button" class="btn sec" style="flex:1" data-t="repos" data-v="long">Repos long (8 h)</button></div>' +
       '<div class="doux">Joueurs invités (l\'accès se fait sur invitation de pseudo)</div>' + (membres || '<div class="doux">Personne pour l\'instant.</div>') +
       '<input id="inviter-pseudo" type="text" maxlength="24" autocomplete="off" autocapitalize="off" placeholder="Pseudo à inviter"><button type="button" class="btn" data-t="inviter">Inviter</button>' +
       (moi.superadmin ? '<div class="doux">Organisateur de la table' + (tcur.organisateur ? " (actuellement " + echapper(tcur.organisateur) + ")" : "") + '. Laisse vide pour reprendre la main.</div><input id="orga-pseudo" type="text" maxlength="24" autocomplete="off" autocapitalize="off" placeholder="Pseudo de l\'organisateur"><button type="button" class="btn sec" data-t="organisateur">Désigner l\'organisateur</button>' : "") + "</div>";
@@ -686,6 +687,10 @@ document.addEventListener("click", async (ev) => {
     else if (a === "rejoindre") {
       await api("/api/tables/" + v + "/rejoindre", { perso: $("choix-" + v).value });
       await entrerTable(v);
+    }
+    else if (a === "repos") {
+      const r = await api("/api/action", { action: "repos", params: { type: v } });
+      etat.partie = r.partie; etat.message = v === "long" ? "Repos long : tout est récupéré." : "Repos court : pouvoirs rechargés."; afficher(etat.partie);
     }
     else if (a === "renommer") {
       const r = await api("/api/tables/" + etat.tableId + "/renommer", { nom: $("nom-table-r").value });

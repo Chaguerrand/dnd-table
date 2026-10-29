@@ -12,7 +12,7 @@ function nouvellePartie(nom) {
   return {
     version: 1, nom: nom || "Nouvelle partie", rev: 0,
     personnages: {},
-    temps: { minute: 0 },
+    temps: { minute: 480 }, // une nouvelle partie commence le jour 1 à 8h
     quetes: { objectifs: [] },
     carte: { largeur: 20, hauteur: 15, murs: [], jetons: {} },
     jets_en_attente: [],

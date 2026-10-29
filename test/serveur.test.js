@@ -457,3 +457,22 @@ test("tables: renommer (organisateur et superadmin) et suggestions sans fuite du
     assert.equal((await max.post("/api/tables/" + t.id + "/suggestions")).status, 403);
   } finally { s.fermer(); }
 });
+
+test("temps: l'état affiche le jour et l'heure, et rappelle au MJ de faire avancer l'heure", async () => {
+  const { resume } = require("../src/mj/prompt");
+  const { tourMJ } = require("../src/mj/boucle");
+  const partie = nouvellePartie("t");
+  importerPersonnage(partie, { id: "korga", base: KORGA.base, etat: KORGA.etat });
+  assert.match(resume(partie), /jour 1, 08h00/);
+  assert.doesNotMatch(resume(partie), /RAPPEL TEMPS/);
+  const rien = { async generer() { return { texte: "Rien ne bouge.", appels: [], parts: [] }; } };
+  await tourMJ(partie, rien, "[Korga] j'attends");
+  await tourMJ(partie, rien, "[Korga] j'attends encore");
+  assert.equal(partie.temps.tours_sans_avance, 2);
+  assert.match(resume(partie), /RAPPEL TEMPS/);
+  const avance = { async generer() { return partie.temps.tours_sans_avance === 2 && !avance.fait ? (avance.fait = true, { texte: "", appels: [{ nom: "avancer_temps", args: { minutes: 10 } }], parts: [] }) : { texte: "Dix minutes passent.", appels: [], parts: [] }; } };
+  await tourMJ(partie, avance, "[Korga] je fouille");
+  assert.equal(partie.temps.minute, 490);
+  assert.equal(partie.temps.tours_sans_avance, 0);
+  assert.doesNotMatch(resume(partie), /RAPPEL TEMPS/);
+});
