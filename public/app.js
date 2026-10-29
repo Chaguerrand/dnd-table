@@ -30,7 +30,17 @@ const ONGLETS = [
   { id: "inv", label: "Objets", icone: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>' },
   { id: "quetes", label: "Quêtes", icone: '<path d="M6 3v18"/><path d="M6 4h12l-3 4 3 4H6"/>' }
 ];
-const THEMES = { parchemin: ["Parchemin", "Clair, papier et encre rouge."], commonwealth: ["Commonwealth", "Sombre, ambre et rayures de chantier."] };
+const THEMES = {
+  parchemin: ["Parchemin", "Clair, papier et encre rouge."],
+  commonwealth: ["Commonwealth", "Sombre, ambre et rayures de chantier."],
+  "haute-fantasy": ["Haute fantasy", "Forêt profonde et sable doré."],
+  "dark-fantasy": ["Dark fantasy", "Noir de cendre et rouge sang."],
+  pirates: ["Pirates, haute mer", "Bleu nuit et or des doublons."],
+  feerie: ["Féerie", "Violet crépuscule et turquoise."],
+  noir: ["Détective noir", "Gris fumée et pluie."],
+  futur: ["Monde futur", "Clair, cyan et orange vif."],
+  espace: ["Bataille spatiale", "Noir cosmique et bleu laser."]
+};
 const DISPOSITIONS = {
   auto: ["Automatique", "Onglets sur téléphone, colonnes sur grand écran."],
   onglets: ["Onglets", "Un panneau à la fois, barre en bas."],
@@ -511,7 +521,7 @@ function rendreReglages() {
   $("c-reglages").innerHTML =
     '<div class="boite"><h2>Personnage</h2>' + persoBloc + "</div>" +
     compte + tableBloc + organisateur +
-    '<div class="boite"><h2>Thème</h2>' + choix(THEMES, etat.theme, "theme") + "</div>" +
+    '<div class="boite"><h2>Thème</h2>' + '<select id="choix-theme">' + Object.keys(THEMES).map((k) => '<option value="' + k + '"' + (k === etat.theme ? " selected" : "") + ">" + echapper(THEMES[k][0]) + "</option>").join("") + "</select></div>" +
     (window.innerWidth >= 700 ? '<div class="boite"><h2>Disposition</h2>' + choix(DISPOSITIONS, etat.disposition, "disposition") + '<div class="doux">Pour grand écran. Sur téléphone, les onglets suffisent.</div></div>' : "") +
     (orga ? '<div class="boite"><h2>Sauvegarde</h2><div class="doux">Télécharge toute la partie dans un fichier, ou recharge un fichier. Charger une sauvegarde remplace la partie en cours.</div>' +
     '<button type="button" class="btn sec" data-a="telecharger">Télécharger la sauvegarde</button>' +
@@ -587,6 +597,7 @@ document.addEventListener("click", async (ev) => {
   }
 });
 document.addEventListener("change", async (ev) => {
+  if (ev.target.id === "choix-theme") { etat.theme = ev.target.value; ecrireLocal("theme", etat.theme); afficher(etat.partie); return; }
   if (ev.target.id !== "fichier" || !ev.target.files[0]) return;
   try {
     const texte = await ev.target.files[0].text();
